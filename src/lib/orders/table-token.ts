@@ -18,13 +18,16 @@
  * Astro leaves undefined in the browser anyway).
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { optionalServerEnv } from "../env";
 
 /** base64url of the HMAC, kept to 128 bits — ample against forgery here. */
 const SIG_LEN = 22;
 
 function secret(): string | null {
-  const s = import.meta.env.TABLE_TOKEN_SECRET;
-  return typeof s === "string" && s.length >= 16 ? s : null;
+  // Runtime fallback so a "Sensitive" TABLE_TOKEN_SECRET (absent at build) still
+  // resolves on Vercel. See lib/env.ts.
+  const s = optionalServerEnv(import.meta.env.TABLE_TOKEN_SECRET, "TABLE_TOKEN_SECRET");
+  return s && s.length >= 16 ? s : null;
 }
 
 /** True when a signing secret is configured — QR generation needs this. */

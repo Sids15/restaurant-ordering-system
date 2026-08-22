@@ -11,6 +11,7 @@ import QRCode from "qrcode";
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
 import { signTableToken, tableTokensConfigured } from "../../lib/orders/table-token";
+import { optionalServerEnv } from "../../lib/env";
 import "../../styles/staff.css";
 import "../../styles/table-qr.css";
 
@@ -40,7 +41,9 @@ const labels = [
 // sheet was generated (production, a preview link, or localhost) — the codes are
 // meant to be printed once and last. Falls back to the request origin when
 // PUBLIC_SITE_URL isn't set.
-const baseUrl = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/+$/, "");
+const baseUrl = (
+  optionalServerEnv(import.meta.env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL") ?? Astro.url.origin
+).replace(/\/+$/, "");
 
 // The QR encodes a SIGNED token, not the raw label, so a scanned code can't be
 // guessed or forged (see lib/orders/table-token.ts). Without the secret we can't

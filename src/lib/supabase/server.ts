@@ -9,14 +9,15 @@
 import { createServerClient, parseCookieHeader } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AstroCookies } from "astro";
+import { serverEnv } from "../env";
 
 export function supabaseServer(ctx: {
   request: Request;
   cookies: AstroCookies;
 }): SupabaseClient {
   return createServerClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    serverEnv(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL"),
+    serverEnv(import.meta.env.PUBLIC_SUPABASE_ANON_KEY, "PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {
