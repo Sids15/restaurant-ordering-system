@@ -8,6 +8,7 @@
 import type { AstroCookies } from "astro";
 import { supabaseAdmin } from "../supabase/admin";
 import { openOrJoinTab, type OpenTab } from "./tabs";
+import { verifyTableToken } from "./table-token";
 
 export const TAB_COOKIE = "berlin_tab";
 const MAX_AGE = 60 * 60 * 8; // 8 hours — a dining session
@@ -48,31 +49,45 @@ export type MenuAccess =
   | { mode: "elsewhere"; table: string };
 
 /**
- * Decide what a guest sees at /menu or /menu/<table>:
- *  • already bound to an open tab for this table (or browsing /menu) → serve it
+ * Decide what a guest sees at /menu or /menu/<token>. The URL segment is a
+ * SIGNED table token (see table-token.ts), not a raw label — so a guessed or
+ * arbitrary value can't open a tab.
+ *
+ *  • already bound to an open tab (browsing /menu, or re-scanning the same
+ *    table) → serve it
  *  • bound to a different table → "you're seated at Table X" (no ordering here)
- *  • not bound + a table in the URL → open/join it, set the cookie, serve it
+ *  • not bound + a VALID token → open/join that table's tab, set the cookie
+ *  • not bound + no/invalid token → browse only (no tab created)
  */
 export async function resolveMenuAccess(
   cookies: AstroCookies,
-  urlTable: string | null,
+  urlToken: string | null,
 ): Promise<MenuAccess> {
   const session = await currentSession(cookies);
 
+  // Recover the label from a signed token. A raw label (a legacy link, or the
+  // "you're at Table X" / "order again" links, which carry the plain label)
+  // verifies to null — that's fine: those only matter when a session already
+  // exists, where we fall back to matching the raw value below.
+  const tokenLabel = verifyTableToken(urlToken);
+
   if (session) {
-    if (!urlTable || session.table_label === urlTable) {
+    const target = tokenLabel ?? urlToken;
+    if (!urlToken || session.table_label === target) {
       return { mode: "ok", table: session.table_label };
     }
     return { mode: "elsewhere", table: session.table_label };
   }
 
-  if (urlTable) {
-    const tab: OpenTab | null = await openOrJoinTab(supabaseAdmin(), urlTable);
+  // No session: a tab is opened ONLY for a validly-signed token. Guessed labels
+  // recover nothing, so they can neither order onto a table nor spawn a tab.
+  if (tokenLabel) {
+    const tab: OpenTab | null = await openOrJoinTab(supabaseAdmin(), tokenLabel);
     if (tab) {
       setTabCookie(cookies, tab.token);
       return { mode: "ok", table: tab.table_label };
     }
   }
 
-  return { mode: "ok", table: null }; // bare /menu, no session — browse only
+  return { mode: "ok", table: null }; // no valid token — browse only
 }

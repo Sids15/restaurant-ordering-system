@@ -7,6 +7,10 @@ interface ImportMetaEnv {
   readonly PUBLIC_SUPABASE_ANON_KEY: string;
   /** Supabase service-role key (SECRET — server only). */
   readonly SUPABASE_SERVICE_ROLE_KEY: string;
+  /** HMAC secret that signs table QR tokens (SECRET — server only). */
+  readonly TABLE_TOKEN_SECRET: string;
+  /** Canonical customer domain for printed QR codes (public; optional). */
+  readonly PUBLIC_SITE_URL?: string;
 }
 
 interface ImportMeta {

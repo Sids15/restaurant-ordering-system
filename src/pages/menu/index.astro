@@ -2,7 +2,8 @@
 /**
  * Customer menu at /menu (no table) — browsing without a table, or a device
  * that already has a session (it's served its bound table). The per-table entry
- * point is /menu/[table]. Legacy ?table= still binds.
+ * point is /menu/[token]. A ?table= value is treated as a signed token too, so a
+ * raw label no longer binds a tab (that was a spoofing vector).
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import MenuView from "../../components/order/MenuView.astro";

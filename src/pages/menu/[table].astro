@@ -1,9 +1,10 @@
 ---
 /**
- * Customer menu for a specific table — /menu/<table>, what a table's QR encodes.
- * Resolving access binds the device to this table's tab (httpOnly cookie) on
- * first visit; a device already bound to another open table sees a notice
- * instead, so it can't order onto this one.
+ * Customer menu for a specific table — /menu/<token>, what a table's QR encodes.
+ * The segment is a SIGNED table token (not a raw label), so only a real, staff-
+ * printed code opens a tab; a guessed value opens nothing. Resolving access binds
+ * the device to this table's tab (httpOnly cookie) on first visit; a device
+ * already bound to another open table sees a notice instead.
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import MenuView from "../../components/order/MenuView.astro";

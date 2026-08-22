@@ -10,6 +10,7 @@
 import QRCode from "qrcode";
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
+import { signTableToken, tableTokensConfigured } from "../../lib/orders/table-token";
 import "../../styles/staff.css";
 import "../../styles/table-qr.css";
 
@@ -41,18 +42,25 @@ const labels = [
 // PUBLIC_SITE_URL isn't set.
 const baseUrl = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/+$/, "");
 
-const cards = await Promise.all(
-  labels.map(async (label) => {
-    const url = `${baseUrl}/menu/${encodeURIComponent(label)}`;
-    // Dark ink on a white quiet zone — printed on paper, this scans reliably.
-    const svg = await QRCode.toString(url, {
-      type: "svg",
-      margin: 1,
-      color: { dark: "#171512", light: "#ffffff" },
-    });
-    return { label, url, svg };
-  }),
-);
+// The QR encodes a SIGNED token, not the raw label, so a scanned code can't be
+// guessed or forged (see lib/orders/table-token.ts). Without the secret we can't
+// mint codes — surface that instead of printing unverifiable ones.
+const tokensReady = tableTokensConfigured();
+
+const cards = tokensReady
+  ? await Promise.all(
+      labels.map(async (label) => {
+        const url = `${baseUrl}/menu/${signTableToken(label)}`;
+        // Dark ink on a white quiet zone — printed on paper, this scans reliably.
+        const svg = await QRCode.toString(url, {
+          type: "svg",
+          margin: 1,
+          color: { dark: "#171512", light: "#ffffff" },
+        });
+        return { label, url, svg };
+      }),
+    )
+  : [];
 
 const prefill = labels.join(", ");
 ---
@@ -99,7 +107,13 @@ const prefill = labels.join(", ");
       </div>
     </form>
 
-    {cards.length === 0 ? (
+    {!tokensReady ? (
+      <p class="st-empty st-rise-2">
+        Table QR codes are turned off until <code>TABLE_TOKEN_SECRET</code> is set
+        on the server. Ask an admin to add it, then reload this page. (Codes are
+        signed with it so a scanned table can't be guessed or forged.)
+      </p>
+    ) : cards.length === 0 ? (
       <p class="st-empty st-rise-2">
         No codes yet. Enter your table labels above to generate a printable sheet.
       </p>
