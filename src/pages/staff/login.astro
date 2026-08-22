@@ -39,6 +39,7 @@ if (user) {
 const ERROR_COPY: Record<string, string> = {
   invalid: "That email and password don't match. Please try again.",
   missing: "Enter your email and password.",
+  throttled: "Too many sign-in attempts. Please wait a few minutes and try again.",
 };
 const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
 ---

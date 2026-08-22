@@ -9,10 +9,14 @@
 
 /** Unambiguous uppercase alphabet + digits (no 0 O 1 I L). */
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const DEFAULT_LENGTH = 6;
+// 8 chars over a 31-symbol alphabet ≈ 8.5e11 codes. The code doubles as the
+// capability token for the tracking page (anyone with it sees the order), and
+// the poll endpoint can't be IP-rate-limited without breaking NAT-shared guest
+// polling — so entropy is the enumeration defence. Longer than the old 6.
+const DEFAULT_LENGTH = 8;
 
 /**
- * A random order code, e.g. "B7K2Q9". Uses crypto for uniform, unguessable
+ * A random order code, e.g. "B7K2Q9RT". Uses crypto for uniform, unguessable
  * picks (the code doubles as the capability token for the tracking page).
  */
 export function generateOrderCode(length: number = DEFAULT_LENGTH): string {

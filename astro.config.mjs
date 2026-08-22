@@ -11,6 +11,14 @@ export default defineConfig({
   output: 'server',
   adapter: vercel(),
 
+  // CSRF: reject form POSTs whose Origin doesn't match the host. The staff
+  // mutation endpoints are cookie-authenticated, so this (with SameSite=Lax
+  // cookies) blocks cross-site form forgery. Pinned explicitly rather than
+  // relying on the framework default.
+  security: {
+    checkOrigin: true,
+  },
+
   // React is loaded only as islands, on the handful of components that
   // genuinely need client interactivity. Everything else ships as static HTML.
   integrations: [react()],
