@@ -8,6 +8,14 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Role } from "../types";
 
+/**
+ * The roles that actually grant access. A profile with any other role (e.g. the
+ * 'pending' default a fresh signup receives, before a manager promotes it) is
+ * treated as NOT staff — mirrors the database's is_staff() so a self-provisioned
+ * account can't reach staff surfaces even if signups are left open.
+ */
+const STAFF_ROLES: readonly Role[] = ["manager", "kitchen", "server"];
+
 export interface StaffContext {
   user: User;
   profile: { id: string; name: string; role: Role };
@@ -33,6 +41,9 @@ export async function loadStaff(
     .maybeSingle();
 
   if (!data) return { user, profile: null };
+  // A profile whose role isn't a working staff role (e.g. 'pending') is not
+  // staff: return null so middleware redirects and requireStaff() 401s.
+  if (!STAFF_ROLES.includes(data.role as Role)) return { user, profile: null };
   return { user, profile: data as StaffContext["profile"] };
 }
 

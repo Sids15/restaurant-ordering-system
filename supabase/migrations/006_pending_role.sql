@@ -1,0 +1,15 @@
+-- BERLIN — introduce a non-privileged 'pending' role. Apply after 005_merge.sql.
+--
+-- SECURITY (critical): before this change, a new auth user auto-received a
+-- working 'server' profile (see handle_new_user + profiles.role default), and
+-- every order/tab RLS policy treated ANY profile as staff via
+-- `current_role_name() is not null`. With public signups enabled (the Supabase
+-- default), anyone could self-provision a staff account. 'pending' is the new
+-- default: a signed-up account that a manager has NOT yet promoted, and which
+-- the RLS helper is_staff() (added in 007) treats as NOT staff.
+--
+-- The enum value is added in its OWN migration/transaction. Postgres forbids
+-- referencing a newly added enum value in the same transaction that adds it, so
+-- 007_role_lockdown.sql (a separate file → separate transaction) is where
+-- 'pending' is first referenced.
+alter type staff_role add value if not exists 'pending';
