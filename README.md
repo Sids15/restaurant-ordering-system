@@ -1,9 +1,9 @@
-# BERLIN — Haus de Gourmet
+# Restaurant Ordering App
 
-A **real-time QR ordering + kitchen app** for a rooftop gourmet house and bar.
-Customers scan a table QR to browse the menu and order; staff confirm and track
-orders; the kitchen works a live board. Built to Design System v1.0: dark
-architectural surfaces, warm ivory typography, restrained brass accents.
+A **real-time QR ordering + kitchen app** for a restaurant. Customers scan a
+table QR to browse the menu and order; staff confirm and track orders; the
+kitchen works a live board. Built on a warm-light, white-label design system —
+re-skinnable per restaurant via `src/data/brand.ts`.
 
 Server-rendered on serverless (Vercel), backed by Supabase (Postgres + Realtime
 + Auth). See [`docs/architecture.md`](docs/architecture.md) for the full design,
@@ -22,7 +22,7 @@ get running.
   surfaces only.
 - **Supabase** — Postgres + row-level security, Realtime (live kitchen board),
   and Auth (staff logins with roles).
-- **Self-hosted variable fonts** — Bodoni Moda (display) + Manrope (UI).
+- **Self-hosted variable fonts** — Fraunces (display) + DM Sans (UI).
 
 ## Commands
 
@@ -56,13 +56,13 @@ allowlist mechanism (`.safetyscanignore` / inline `safety-scan-ignore`).
 
 ```
 src/
-├── assets/       # optimized-at-build imagery (rooftop staff-login shot)
+├── assets/        # optimized-at-build imagery (currently empty — see its README)
 ├── components/
-│   ├── order/    # customer menu, cart, order builder
-│   └── staff/    # staff / kitchen surfaces
-├── data/site.ts  # brand + public contact details (no secrets)
-├── layouts/      # AppLayout — the app document shell
-├── lib/          # supabase clients, orders, menu, auth, http helpers
-├── pages/        # menu · order/[code] · staff/* · kitchen/* · admin/* · api/*
-└── styles/       # tokens.css + global.css + surface styles
+│   ├── order/     # customer menu, cart, order builder
+│   └── staff/     # staff / kitchen surfaces
+├── data/brand.ts  # brand + public contact details (no secrets)
+├── layouts/       # AppLayout — the app document shell
+├── lib/           # supabase clients, orders, menu, auth, http helpers
+├── pages/         # menu · order/[code] · staff/* · kitchen/* · admin/* · api/*
+└── styles/        # tokens.css + global.css + surface styles
 ```

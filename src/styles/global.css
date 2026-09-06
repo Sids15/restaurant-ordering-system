@@ -101,11 +101,11 @@ main {
 }
 
 .container--xl {
-  max-width: var(--container-xl);
+  max-width: var(--container-lg);
 }
 
 .container--editorial {
-  max-width: var(--container-editorial);
+  max-width: var(--container-md);
 }
 
 .section {

@@ -3,11 +3,12 @@
  * Order slip (Feature: printing). A print-optimised ticket for one round —
  * code, table, items + notes — that staff can send to a receipt/kitchen
  * printer. Behind the auth middleware (any staff). On screen it's a narrow card
- * on the dark app; @media print switches to black-on-white receipt stock and
+ * on the app surface; @media print switches to ink-on-white receipt stock and
  * hides the buttons.
  */
 import AppLayout from "../../../../layouts/AppLayout.astro";
 import { getStaffOrder } from "../../../../lib/orders/staff";
+import { brand } from "../../../../data/brand";
 
 export const prerender = false;
 
@@ -35,7 +36,7 @@ function when(iso: string): string {
 }
 ---
 
-<AppLayout title={order ? `Slip ${order.code} — Berlin` : "Order not found — Berlin"}>
+<AppLayout title={order ? `Slip ${order.code} — ${brand.name}` : `Order not found — ${brand.name}`}>
   <main class="slipwrap">
     {!order ? (
       <p class="slipwrap__missing">No order found for <strong>{code}</strong>.</p>
@@ -48,7 +49,7 @@ function when(iso: string): string {
 
         <article class="slip">
           <header class="slip__head">
-            <p class="slip__brand">BERLIN · Haus de Gourmet</p>
+            <p class="slip__brand">{brand.name}</p>
             <p class="slip__kind">Order slip</p>
           </header>
 
@@ -71,7 +72,7 @@ function when(iso: string): string {
           </ul>
 
           {order.notes && <p class="slip__ordernote">Order note: {order.notes}</p>}
-          <p class="slip__foot">— Berlin —</p>
+          <p class="slip__foot">— {brand.name} —</p>
         </article>
       </>
     )}
@@ -94,7 +95,7 @@ function when(iso: string): string {
   .slipwrap__missing {
     padding-block: var(--space-64);
     text-align: center;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .actions {
     display: flex;
@@ -104,32 +105,35 @@ function when(iso: string): string {
   }
   .actions__back {
     font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .actions__print {
     min-height: 2.5rem;
     padding-inline: var(--space-24);
     background: var(--accent);
-    color: var(--color-warm-black);
+    color: var(--on-accent);
     border: none;
+    border-radius: var(--radius-md);
     font: inherit;
     text-transform: uppercase;
-    letter-spacing: var(--tracking-nav);
+    letter-spacing: var(--tracking-label);
     cursor: pointer;
   }
 
   .slip {
-    background: var(--color-ivory);
-    color: var(--color-warm-black);
+    background: var(--surface-raised);
+    color: var(--ink);
     padding: var(--space-24);
     font-family: var(--font-ui);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
   }
   .slip__head {
     text-align: center;
     padding-block-end: var(--space-12);
-    border-bottom: 1px dashed #9a9184;
+    border-bottom: 1px dashed var(--border-strong);
   }
   .slip__brand {
     font-size: var(--fs-caption);
@@ -146,14 +150,14 @@ function when(iso: string): string {
     flex-wrap: wrap;
     gap: var(--space-8) var(--space-24);
     padding-block: var(--space-12);
-    border-bottom: 1px dashed #9a9184;
+    border-bottom: 1px dashed var(--border-strong);
     font-size: var(--fs-caption);
   }
   .slip__meta span {
     display: block;
     text-transform: uppercase;
-    letter-spacing: var(--tracking-meta);
-    color: #5b544a;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink-muted);
   }
   .slip__meta strong {
     font-size: var(--fs-body);
@@ -180,18 +184,18 @@ function when(iso: string): string {
   }
   .slip__note {
     font-size: var(--fs-caption);
-    color: #5b544a;
+    color: var(--ink-muted);
   }
   .slip__ordernote {
     padding-block: var(--space-12);
-    border-top: 1px dashed #9a9184;
+    border-top: 1px dashed var(--border-strong);
     font-size: var(--fs-caption);
   }
   .slip__foot {
     text-align: center;
     padding-block-start: var(--space-16);
     font-size: var(--fs-caption);
-    color: #5b544a;
+    color: var(--ink-muted);
   }
 
   @media print {

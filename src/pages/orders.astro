@@ -10,6 +10,7 @@ import AppLayout from "../layouts/AppLayout.astro";
 import { currentSession } from "../lib/orders/session";
 import { getSessionOrders, type CustomerOrderState } from "../lib/orders/track";
 import { formatINR } from "../lib/money";
+import { brand } from "../data/brand";
 
 export const prerender = false;
 
@@ -20,8 +21,8 @@ const runningTotal = rounds
   .reduce((s, r) => s + r.subtotal, 0);
 
 const STATUS: Record<CustomerOrderState, { label: string; tone: string }> = {
-  waiting: { label: "Waiting for a server", tone: "waiting" },
-  placed: { label: "Order placed", tone: "placed" },
+  waiting: { label: "Waiting for a server", tone: "pending" },
+  placed: { label: "Order placed", tone: "confirmed" },
   cancelled: { label: "Cancelled", tone: "cancelled" },
 };
 
@@ -34,14 +35,13 @@ function at(iso: string): string {
 }
 ---
 
-<AppLayout title="Your table — Berlin">
+<AppLayout title={`Your table — ${brand.name}`}>
   {!session ? (
     <main class="hist hist--ended">
       <header class="hist__head">
-        <p class="hist__eyebrow">Berlin · Haus de Gourmet</p>
+        <p class="hist__eyebrow">{brand.name}</p>
         <h1 class="hist__title">Session closed</h1>
         <p class="hist__sub">Your table's bill has been settled, so this history is closed.</p>
-        <div class="hist__rule" aria-hidden="true"><span class="hist__mark">✦</span></div>
       </header>
       <p class="hist__ended-note">
         Thank you for dining with us. To order again, scan the code at your table.
@@ -56,10 +56,9 @@ function at(iso: string): string {
   ) : (
     <main class="hist">
       <header class="hist__head">
-        <p class="hist__eyebrow">Berlin · Haus de Gourmet</p>
+        <p class="hist__eyebrow">{brand.name}</p>
         <h1 class="hist__title">Your table</h1>
         <p class="hist__sub">Everything you've ordered this visit, in one place.</p>
-        <div class="hist__rule" aria-hidden="true"><span class="hist__mark">✦</span></div>
         <p class="hist__table">Table {session.table_label}</p>
       </header>
 
@@ -125,20 +124,21 @@ function at(iso: string): string {
 
 <style>
   .hist {
-    max-width: 37rem;
+    max-width: var(--container-md);
     margin-inline: auto;
-    padding: clamp(var(--space-40), 8vw, var(--space-80)) var(--gutter) var(--space-80);
+    padding: clamp(var(--space-40), 8vw, var(--space-64)) var(--gutter) var(--space-64);
     display: flex;
     flex-direction: column;
-    gap: var(--space-32);
+    gap: var(--space-24);
   }
   .hist--ended {
     min-height: 100svh;
     justify-content: center;
     text-align: center;
+    gap: var(--space-16);
   }
 
-  /* --- Carte header ------------------------------------------------------- */
+  /* --- Header --------------------------------------------------------------- */
   .hist__head {
     text-align: center;
     display: flex;
@@ -146,7 +146,6 @@ function at(iso: string): string {
     align-items: center;
   }
   .hist__eyebrow {
-    font-family: var(--font-ui);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
@@ -154,62 +153,41 @@ function at(iso: string): string {
     color: var(--accent);
   }
   .hist__title {
-    margin-block-start: var(--space-16);
+    margin-block-start: var(--space-8);
     font-family: var(--font-display);
-    font-size: var(--fs-display-m);
-    line-height: 0.95;
-    letter-spacing: var(--tracking-display);
-    color: var(--text-strong);
+    font-size: var(--fs-display-l);
+    color: var(--ink);
   }
   .hist__sub {
-    margin: var(--space-16) auto 0;
+    margin: var(--space-8) auto 0;
     max-width: 24rem;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: var(--fs-body-l);
-    line-height: 1.4;
-    color: var(--text-muted);
-  }
-  .hist__rule {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: var(--space-16);
-    width: 12rem;
-    margin: var(--space-32) auto 0;
-    color: var(--accent);
-  }
-  .hist__rule::before,
-  .hist__rule::after {
-    content: "";
-    height: 1px;
-    background: var(--border-strong);
-  }
-  .hist__mark {
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
-    transform: translateY(-0.05em);
+    color: var(--ink-muted);
   }
   .hist__table {
-    margin-block-start: var(--space-24);
-    padding: var(--space-8) var(--space-16);
+    display: inline-flex;
+    margin-block-start: var(--space-16);
+    padding: var(--space-4) var(--space-12);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
-    border: 1px solid var(--accent-muted);
+    background: var(--accent-soft);
+    border-radius: var(--radius-pill);
   }
   .hist__ended-note {
     margin-inline: auto;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
-  /* --- Running total ------------------------------------------------------ */
+  /* --- Running total ---------------------------------------------------------- */
   .running {
     padding: var(--space-24);
-    background: var(--bg-elevated);
-    border-inline-start: 2px solid var(--accent);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
   .running__row {
     display: flex;
@@ -222,23 +200,23 @@ function at(iso: string): string {
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .running__amt {
     font-family: var(--font-display);
-    font-size: var(--fs-heading-m);
-    color: var(--text-strong);
+    font-size: var(--fs-heading-l);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .running__note {
     margin-block-start: var(--space-8);
     max-width: none;
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
 
-  /* --- Rounds ------------------------------------------------------------- */
+  /* --- Rounds ------------------------------------------------------------------ */
   .rounds {
     display: flex;
     flex-direction: column;
@@ -246,15 +224,24 @@ function at(iso: string): string {
   }
   .round {
     padding: var(--space-24);
-    background: var(--bg-elevated);
-    border-top: 2px solid var(--accent-muted);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
     gap: var(--space-16);
   }
+  .round--pending {
+    border-top-color: var(--status-pending);
+  }
+  .round--confirmed {
+    border-top-color: var(--status-confirmed);
+  }
   .round--cancelled {
     opacity: 0.7;
-    border-top-color: var(--color-berlin-red);
+    border-top-color: var(--danger);
   }
   .round__head {
     display: flex;
@@ -262,41 +249,40 @@ function at(iso: string): string {
     justify-content: space-between;
     gap: var(--space-16);
     padding-block-end: var(--space-16);
-    border-bottom: 1px dashed var(--accent-muted);
+    border-bottom: 1px dashed var(--border);
   }
   .round__no {
     font-family: var(--font-display);
     font-size: var(--fs-heading-s);
-    color: var(--text-strong);
+    color: var(--ink);
   }
   .round__meta {
     margin-block-start: var(--space-4);
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
   .round__status {
     flex: 0 0 auto;
     padding: var(--space-4) var(--space-12);
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
+    border-radius: var(--radius-pill);
     white-space: nowrap;
   }
-  .round__status--waiting {
-    border-color: var(--accent);
-    color: var(--accent);
+  .round__status--pending {
+    color: var(--status-pending);
+    background: var(--status-pending-soft);
   }
-  .round__status--placed {
-    border-color: #4c8b4a;
-    color: #6fae5c;
+  .round__status--confirmed {
+    color: var(--status-confirmed);
+    background: var(--status-confirmed-soft);
   }
   .round__status--cancelled {
-    border-color: var(--color-berlin-red);
-    color: #c76b60;
+    color: var(--danger);
+    background: var(--danger-soft);
   }
   .round__lines {
     display: flex;
@@ -307,7 +293,7 @@ function at(iso: string): string {
     align-items: baseline;
     gap: var(--space-16);
     padding-block: var(--space-12);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
   }
   .round__qty {
     flex: 0 0 auto;
@@ -317,11 +303,11 @@ function at(iso: string): string {
   }
   .round__name {
     flex: 1 1 auto;
-    color: var(--text);
+    color: var(--ink);
   }
   .round__price {
     flex: 0 0 auto;
-    color: var(--text);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .round__foot {
@@ -334,27 +320,27 @@ function at(iso: string): string {
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .round__subv {
     font-family: var(--font-display);
     font-size: var(--fs-heading-s);
-    color: var(--text-strong);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .round__track {
     margin-inline-start: auto;
     font-size: var(--fs-caption);
     font-weight: 500;
-    letter-spacing: var(--tracking-nav);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
-    border-bottom: 1px solid var(--accent-muted);
+    border-bottom: 1px solid var(--border-strong);
     padding-block-end: 2px;
-    transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .round__track:hover {
-    color: var(--text-strong);
+    color: var(--ink);
     border-color: var(--accent);
   }
 
@@ -362,7 +348,7 @@ function at(iso: string): string {
     margin-inline: auto;
     padding-block: var(--space-40);
     text-align: center;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   .hist__link {
@@ -372,18 +358,18 @@ function at(iso: string): string {
     gap: var(--space-12);
     font-size: var(--fs-caption);
     font-weight: 500;
-    letter-spacing: var(--tracking-nav);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
-    border-bottom: 1px solid var(--accent-muted);
+    border-bottom: 1px solid var(--border-strong);
     padding-block-end: var(--space-4);
-    transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .hist__link svg {
-    transition: transform 0.35s var(--ease-out);
+    transition: transform var(--dur-fast) var(--ease-out);
   }
   .hist__link:hover {
-    color: var(--text-strong);
+    color: var(--ink);
     border-color: var(--accent);
   }
   .hist__link:hover svg {

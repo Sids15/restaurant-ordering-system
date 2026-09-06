@@ -1,4 +1,4 @@
-# BERLIN — Architecture
+# Restaurant Ordering App — Architecture
 
 This repo is a **real-time QR ordering + kitchen app** built as an Astro
 project (server-rendered on serverless). The customer menu, staff surfaces, and

@@ -3,4 +3,8 @@
 # or a /regex/ the matched text must satisfy. Lines starting with # are ignored.
 #
 # Keep this list SHORT and justified — every entry weakens the scan.
-# (Nothing is allowlisted yet.)
+
+# Anthropic's public, non-personal no-reply address, used by project
+# convention in the AI co-author commit trailer (docs/superpowers/plans
+# documents that exact trailer as an example). Not a secret.
+noreply@anthropic.com

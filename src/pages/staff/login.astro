@@ -5,14 +5,13 @@
  * staff are sent through — unless their role can't open the target, in which case
  * the form is shown so they can sign in with the right account.
  *
- * Design: a split "back-of-house door" — the nocturnal rooftop panel beside a
- * quiet sign-in column, in the marketing site's night vocabulary.
+ * Design: a split "back-of-house door" — a warm branded panel (built from the
+ * design tokens, no photo) beside a quiet sign-in column.
  */
-import { Picture } from "astro:assets";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { safeNext } from "../../lib/http/safe-next";
 import { roleCanAccess } from "../../lib/auth/access";
-import rooftop from "../../assets/rooftop/rooftop-city-night.jpg";
+import { brand } from "../../data/brand";
 
 export const prerender = false;
 
@@ -44,26 +43,15 @@ const ERROR_COPY: Record<string, string> = {
 const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
 ---
 
-<AppLayout title="Sign in — Berlin">
+<AppLayout title={`Sign in — ${brand.name}`}>
   <main class="login">
     <!-- Brand panel -->
     <aside class="login__aside">
-      <Picture
-        src={rooftop}
-        formats={["avif", "webp"]}
-        fallbackFormat="jpg"
-        alt="Berlin — Haus de Gourmet, a rooftop above the city at night"
-        widths={[600, 900, 1400]}
-        sizes="(max-width: 60rem) 100vw, 55vw"
-        class="login__aside-img"
-      />
-      <div class="login__aside-scrim" aria-hidden="true"></div>
       <div class="login__aside-inner">
         <p class="login__aside-top">Staff &amp; kitchen entrance</p>
         <div class="login__aside-brand">
-          <p class="login__aside-eyebrow">Haus de Gourmet</p>
-          <p class="login__wordmark">Berlin</p>
-          <p class="login__aside-tag">A rooftop gourmet house, above the city.</p>
+          <p class="login__aside-eyebrow">{brand.tagline}</p>
+          <p class="login__wordmark">{brand.name}</p>
         </div>
       </div>
     </aside>
@@ -116,7 +104,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
           <p class="login__help">Trouble signing in? Ask your manager to reset your access.</p>
         </form>
 
-        <p class="login__foot">Berlin · Haus de Gourmet</p>
+        <p class="login__foot">{brand.name}</p>
       </div>
     </section>
   </main>
@@ -148,7 +136,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     min-height: 100svh;
     display: grid;
     grid-template-columns: 1.05fr 0.95fr;
-    background: var(--color-void);
+    background: var(--surface);
   }
 
   /* --- Brand panel -------------------------------------------------------- */
@@ -156,28 +144,14 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     position: relative;
     overflow: hidden;
     isolation: isolate;
-  }
-  .login__aside-img {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: brightness(0.7) contrast(1.05) saturate(0.95);
-  }
-  .login__aside-scrim {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
     background:
-      linear-gradient(to top, var(--color-void) 4%, rgba(9, 9, 8, 0.15) 55%, rgba(9, 9, 8, 0.55) 100%),
-      linear-gradient(to right, rgba(9, 9, 8, 0.55), rgba(9, 9, 8, 0) 60%);
+      radial-gradient(120% 90% at 15% 10%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+      linear-gradient(160deg, var(--accent-soft), var(--surface-sunken) 70%);
   }
   .login__aside-inner {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
+    position: relative;
+    z-index: 1;
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -189,9 +163,10 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .login__aside-eyebrow {
+    font-family: var(--font-ui);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
@@ -201,22 +176,11 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
   .login__wordmark {
     margin-block-start: var(--space-8);
     font-family: var(--font-display);
-    font-weight: 500;
-    font-size: clamp(3.5rem, 7vw, 6rem);
-    line-height: var(--lh-display);
+    font-weight: 600;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    line-height: var(--lh-heading);
     letter-spacing: var(--tracking-display);
-    text-transform: uppercase;
-    color: var(--text-strong);
-  }
-  .login__aside-tag {
-    margin-block-start: var(--space-16);
-    max-width: 20rem;
-    font-size: var(--fs-caption);
-    font-weight: 500;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    line-height: 1.7;
-    color: var(--text-muted);
+    color: var(--ink);
   }
 
   /* --- Sign-in column ----------------------------------------------------- */
@@ -226,14 +190,8 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     align-items: center;
     justify-content: center;
     padding: var(--gutter);
-    border-inline-start: 1px solid var(--accent-muted);
-  }
-  .login__main::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(70% 50% at 50% 0%, rgba(180, 154, 99, 0.08), transparent 70%);
+    border-inline-start: 1px solid var(--border);
+    background: var(--surface);
   }
   .login__stage {
     position: relative;
@@ -248,6 +206,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     flex-direction: column;
   }
   .login__eyebrow {
+    font-family: var(--font-ui);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
@@ -260,37 +219,38 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     width: 2.75rem;
     height: 1px;
     margin-block-start: var(--space-16);
-    background: var(--accent-muted);
+    background: var(--border-strong);
   }
   .login__title {
     margin-block-start: var(--space-24);
     font-family: var(--font-display);
-    font-size: var(--fs-display-s);
-    line-height: var(--lh-display);
+    font-size: var(--fs-display-m);
+    line-height: var(--lh-heading);
     letter-spacing: var(--tracking-display);
-    color: var(--text-strong);
+    color: var(--ink);
   }
   .login__sub {
     margin-block-start: var(--space-12);
     font-size: var(--fs-body);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   .login__alert {
     padding: var(--space-12) var(--space-16);
     font-size: var(--fs-caption);
-    line-height: 1.5;
-    color: var(--text);
-    border-inline-start: 2px solid var(--accent);
-    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    line-height: var(--lh-body);
+    color: var(--ink);
+    border-inline-start: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
   }
   .login__alert strong {
-    color: var(--text-strong);
+    color: var(--ink);
     text-transform: capitalize;
   }
   .login__alert--error {
-    border-inline-start-color: var(--color-berlin-red);
-    background: color-mix(in srgb, var(--color-berlin-red) 14%, transparent);
+    border-inline-start-color: var(--danger);
+    background: var(--danger-soft);
   }
 
   .login__form {
@@ -309,8 +269,8 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
-    transition: color 0.3s var(--ease-out);
+    color: var(--ink-muted);
+    transition: color var(--dur-fast) var(--ease-out);
   }
   .field:focus-within .field__label {
     color: var(--accent);
@@ -321,7 +281,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     background: transparent;
     border: none;
     border-bottom: 1px solid var(--border-strong);
-    color: var(--text-strong);
+    color: var(--ink);
     font: inherit;
     font-size: var(--fs-body-l);
     border-radius: 0;
@@ -338,16 +298,16 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     background: var(--accent);
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.45s var(--ease-out);
+    transition: transform var(--dur-reveal) var(--ease-out);
   }
   .field:focus-within::after {
     transform: scaleX(1);
   }
   .field__input:-webkit-autofill,
   .field__input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--text-strong);
-    -webkit-box-shadow: 0 0 0 1000px var(--color-void) inset;
-    caret-color: var(--text-strong);
+    -webkit-text-fill-color: var(--ink);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+    caret-color: var(--ink);
     transition: background-color 9999s ease-out 0s;
   }
   .field__reveal {
@@ -359,11 +319,11 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     padding: 0;
     font: inherit;
     font-size: var(--fs-label);
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
     cursor: pointer;
-    transition: color 0.3s var(--ease-out);
+    transition: color var(--dur-fast) var(--ease-out);
   }
   .field__reveal:hover,
   .field__reveal:focus-visible {
@@ -377,21 +337,20 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     justify-content: space-between;
     gap: var(--space-16);
     min-height: var(--btn-height);
-    padding-inline: var(--space-24);
+    padding-inline: var(--btn-padding-inline);
     margin-block-start: var(--space-8);
     background: var(--accent);
-    color: var(--color-warm-black);
+    color: var(--on-accent);
     border: none;
+    border-radius: var(--radius-md);
     font: inherit;
     font-weight: 600;
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-nav);
-    text-transform: uppercase;
+    font-size: var(--fs-body);
     cursor: pointer;
-    transition: background-color 0.35s var(--ease-out), transform 0.2s var(--ease-out);
+    transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   }
   .login__submit:hover {
-    background: var(--color-white);
+    background: var(--accent-hover);
   }
   .login__submit:active {
     transform: translateY(1px);
@@ -401,7 +360,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     cursor: progress;
   }
   .login__submit-arrow {
-    transition: transform 0.35s var(--ease-out);
+    transition: transform var(--dur-fast) var(--ease-out);
   }
   .login__submit:hover .login__submit-arrow {
     transform: translateX(4px);
@@ -410,25 +369,25 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
   .login__help {
     margin-block-start: calc(-1 * var(--space-16));
     font-size: var(--fs-caption);
-    line-height: 1.5;
-    color: var(--text-muted);
+    line-height: var(--lh-body);
+    color: var(--ink-muted);
   }
   .login__foot {
     font-size: var(--fs-label);
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   /* --- Responsive --------------------------------------------------------- */
   @media (max-width: 60rem) {
     .login {
       grid-template-columns: 1fr;
-      grid-template-rows: 38svh 1fr;
+      grid-template-rows: 32svh 1fr;
     }
     .login__main {
       border-inline-start: none;
-      border-block-start: 1px solid var(--accent-muted);
+      border-block-start: 1px solid var(--border);
     }
   }
   @media (max-width: 60rem) and (max-height: 40rem) {
@@ -447,16 +406,16 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     .login__head,
     .login__form,
     .login__foot {
-      animation: login-rise var(--dur-entry) var(--ease-out) both;
+      animation: login-rise var(--dur-reveal) var(--ease-out) both;
     }
     .login__aside-brand {
-      animation-delay: 120ms;
+      animation-delay: 90ms;
     }
     .login__form {
-      animation-delay: 180ms;
+      animation-delay: 140ms;
     }
     .login__foot {
-      animation-delay: 300ms;
+      animation-delay: 220ms;
     }
     @keyframes login-rise {
       from {

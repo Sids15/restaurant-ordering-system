@@ -9,7 +9,7 @@ import type { CustomerOrderState } from "../../lib/orders/track";
 
 const POLL_MS = 4000;
 
-/** `tone` selects the --status-* token pair (see order-status.css). */
+/** `tone` selects the --status-* token pair (see src/pages/order/[code].astro's <style> block). */
 const COPY: Record<CustomerOrderState, { title: string; note: string; tone: string }> = {
   waiting: {
     title: "Waiting for a server",

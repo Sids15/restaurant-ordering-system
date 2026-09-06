@@ -445,7 +445,7 @@
 .sheet__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(20, 16, 12, 0.45);
+  background: var(--overlay-scrim);
   animation: fade-in var(--dur-fast) var(--ease-out);
 }
 @keyframes fade-in {

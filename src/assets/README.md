@@ -6,16 +6,17 @@ commit the **highest-quality original you have** (large, high-res). Do not
 pre-compress.
 
 Reference an image from a component by importing it, then passing it to
-`<Picture>` / `<Image>` (see `src/pages/staff/login.astro` for the pattern).
+`<Picture>` / `<Image>` from `astro:assets`.
 
 ## Contents
 
-| Folder     | Subject                              | Used by                     |
-| ---------- | ------------------------------------ | --------------------------- |
-| `rooftop/` | Rooftop + city night ambience        | `/staff/login` split panel  |
+This directory is currently empty — no page imports a build-time image asset
+right now. `/staff/login`'s brand panel is a CSS gradient (see
+`src/pages/staff/login.astro`), not a photo. Add a subfolder here (with its own
+row in this table) the next time a page needs one.
 
 ## Naming
 
-Lowercase, hyphenated, descriptive: `rooftop-city-night.jpg`. Keep the file
+Lowercase, hyphenated, descriptive, e.g. `hero-dish-closeup.jpg`. Keep the file
 extension of the original (`.jpg`/`.png`); the build produces the modern formats
 for you.

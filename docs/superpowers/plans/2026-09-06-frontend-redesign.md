@@ -13,7 +13,7 @@
 ## Testing note (read before starting)
 
 This is a presentation-layer redesign; there is no logic to unit-test. Each task's verification cycle is therefore:
-1. **`npm run build`** must pass (from `C:\Users\Kensyi15\Desktop\booking-system`).
+1. **`npm run build`** must pass (from the repo root).
 2. **Targeted grep** confirming no forbidden leftovers (dead tokens/classes) remain in the files that task touched — exact commands given per task.
 3. **Visual smoke** (`npm run dev`, open the named routes) — a human/reviewer check, not automated.
 
@@ -65,7 +65,7 @@ Do not treat a passing build alone as done; the grep gate is what proves the Ber
 
 Run:
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "data/site" src
+grep -rn "data/site" src
 ```
 Expected importers: `src/layouts/AppLayout.astro` (imports `brand`) and `src/components/order/MenuApp.tsx` (imports `contact`). If grep shows others, add them to Step 6's edit list.
 
@@ -306,17 +306,17 @@ In `src/components/order/MenuApp.tsx`, change line 29 `import { contact } from "
 3. Delete `src/data/site.ts`.
 4. Run:
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm install
+npm install
 ```
 
 - [ ] **Step 8: Verify — build + no dead tokens leak from the foundation**
 
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build
+npm run build
 ```
 Expected: build succeeds.
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "color-void\|mode-night\|mode-editorial\|mode-after-dark\|data/site\|bodoni\|manrope" src astro.config.mjs package.json
+grep -rn "color-void\|mode-night\|mode-editorial\|mode-after-dark\|data/site\|bodoni\|manrope" src astro.config.mjs package.json
 ```
 Expected: **no matches** except inside files scheduled for later tasks that still reference legacy semantic tokens (`--bg`, `--text`, `--accent`, `--accent-muted`) — those are retired surface-by-surface. There must be **zero** matches for `color-void`, `mode-night`, `mode-editorial`, `mode-after-dark`, `data/site`, `bodoni`, `manrope`.
 
@@ -380,17 +380,17 @@ Update `MenuView.astro`, `menu/index.astro`, `menu/[table].astro`, `order/[code]
 
 Delete the Lenis smooth-scroll classes from `src/styles/global.css` (the `html.lenis`, `.lenis.lenis-smooth`, `[data-lenis-prevent]`, `.lenis.lenis-stopped` block) and its explanatory comment about Lenis/GSAP in the `html { overflow-x: clip }` rule (keep `overflow-x: clip`). Remove `"lenis"` from `package.json` dependencies, then:
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm install
+npm install
 ```
 
 - [ ] **Step 7: Verify**
 
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build
+npm run build
 ```
 Expected: build succeeds.
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "lenis\|Lenis\|BG_RAMP\|roman\|Berlin\|--bg\b\|--text\b\|--accent-muted\|color-void\|magnet\|menu__progress" src/components/order src/pages/menu src/pages/order src/styles/global.css package.json
+grep -rn "lenis\|Lenis\|BG_RAMP\|roman\|Berlin\|--bg\b\|--text\b\|--accent-muted\|color-void\|magnet\|menu__progress" src/components/order src/pages/menu src/pages/order src/styles/global.css package.json
 ```
 Expected: **no matches.** Then `npm run dev` and smoke `/menu`, `/menu/T1`, place an order → `/order/<code>`: browse/filter/search, add to cart, sheet opens, order places, tracking renders.
 
@@ -416,7 +416,7 @@ Expected: **no matches.** Then `npm run dev` and smoke `/menu`, `/menu/T1`, plac
 - [ ] **Step 4: Restyle `staff.css`, `DishForm.astro`, and the staff pages** — order desk index, manual order builder (`new.astro` + `DishForm`), table-QR management (`tables.astro`), tabs list/detail. Tidy lists/cards, denser than customer side, same warm tokens. Reuse `order-builder.css` form controls.
 - [ ] **Step 5: Verify**
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|Berlin\|Haus de Gourmet" src/pages/staff src/components/staff src/components/order/PendingQueue.tsx src/components/order/pending-queue.css src/styles/staff.css
+npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|Berlin\|Haus de Gourmet" src/pages/staff src/components/staff src/components/order/PendingQueue.tsx src/components/order/pending-queue.css src/styles/staff.css
 ```
 Expected: build succeeds; **no matches.** Smoke: log in as a server, view `/staff` (pending queue), `/staff/new`, `/staff/tables`, `/staff/tabs`.
 - [ ] **Step 6: Commit** (if authorized) — subject `Redesign staff order desk` + trailer.
@@ -439,7 +439,7 @@ Expected: build succeeds; **no matches.** Smoke: log in as a server, view `/staf
 - [ ] **Step 4: Restyle `kitchen/index.astro`** wrapper + masthead usage.
 - [ ] **Step 5: Verify**
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|--bg\b\|--text\b\|Berlin" src/pages/kitchen src/components/order/KitchenBoard.tsx src/components/order/kitchen-board.css src/components/order/AvailabilityPanel.tsx src/components/order/availability-panel.css
+npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|--bg\b\|--text\b\|Berlin" src/pages/kitchen src/components/order/KitchenBoard.tsx src/components/order/kitchen-board.css src/components/order/AvailabilityPanel.tsx src/components/order/availability-panel.css
 ```
 Expected: build succeeds; **no matches.** Smoke: log in as kitchen, open `/kitchen`; place a customer order in another tab and confirm it appears live; advance a status; 86 a dish and confirm it drops from `/menu`.
 - [ ] **Step 6: Commit** (if authorized) — subject `Redesign kitchen board` + trailer.
@@ -460,7 +460,7 @@ Expected: build succeeds; **no matches.** Smoke: log in as kitchen, open `/kitch
 - [ ] **Step 3: Restyle the add/edit forms (`items/new.astro`, `items/[id].astro`)** — proper labeled fields (`--field-height`, `--radius-sm`, `--border`), primary save (`--accent`), destructive delete (`--danger`). Same warm system. No field/name/behavior changes.
 - [ ] **Step 4: Verify**
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|--bg\b\|--text\b\|Berlin" src/pages/admin
+npm run build && grep -rn "mode-night\|mode-editorial\|mode-after-dark\|color-void\|--accent-muted\|--bg\b\|--text\b\|Berlin" src/pages/admin
 ```
 Expected: build succeeds; **no matches.** Smoke: log in as manager, `/admin`, create an item, edit it, toggle availability, delete it.
 - [ ] **Step 5: Commit** (if authorized) — subject `Redesign admin menu editor` + trailer.
@@ -482,7 +482,7 @@ Expected: build succeeds; **no matches.** Smoke: log in as manager, `/admin`, cr
 
 - [ ] **Step 1: Read** `staff/login.astro`, `slip.astro`, `tables.astro`, `orders.astro`, `src/assets/README.md`, and confirm the rooftop image importer is only `login.astro`:
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "assets/rooftop\|rooftop" src
+grep -rn "assets/rooftop\|rooftop" src
 ```
 - [ ] **Step 2: Rewrite `staff/login.astro`** — keep the split-panel layout, but replace the imported rooftop `<Picture>`/`<Image>` with a warm branded panel: a CSS gradient built from `--accent` / `--accent-soft` / `--surface-sunken`, showing `brand.name` + `brand.tagline`. Remove the image import. Keep the form (fields, submit, error/throttled messaging) on the new tokens.
 - [ ] **Step 3: Delete the rooftop asset** — remove `src/assets/rooftop/` and delete its row from the "Contents" table in `src/assets/README.md`. If that leaves the README describing an empty folder, adjust the surrounding copy so it still reads correctly (asset dir may now be empty — say so).
@@ -490,11 +490,11 @@ cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "assets/rooftop\|rooft
 - [ ] **Step 5: Light-touch `slip.astro`** — keep it a minimal ink-on-white print slip; only swap any `--color-*`/`mode-*`/Berlin copy for tokens/`brand`. Don't over-design a thermal receipt.
 - [ ] **Step 6: Full-repo final sweep**
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "color-void\|color-charcoal\|color-warm-black\|color-ivory\|color-champagne\|berlin-red\|mode-night\|mode-editorial\|mode-after-dark\|Haus de Gourmet\|bodoni\|manrope\|\blenis\b\|data/site" src astro.config.mjs package.json README.md docs
+grep -rn "color-void\|color-charcoal\|color-warm-black\|color-ivory\|color-champagne\|berlin-red\|mode-night\|mode-editorial\|mode-after-dark\|Haus de Gourmet\|bodoni\|manrope\|\blenis\b\|data/site" src astro.config.mjs package.json README.md docs
 ```
 Expected: **no matches** (docs may mention the redesign spec/plan filenames — that's fine; the forbidden strings above must be gone from code). Also confirm no stray legacy semantic tokens remain:
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && grep -rn "var(--bg)\|var(--bg-elevated)\|var(--text)\|var(--text-muted)\|var(--text-strong)\|var(--accent-muted)\|var(--border-subtle)" src
+grep -rn "var(--bg)\|var(--bg-elevated)\|var(--text)\|var(--text-muted)\|var(--text-strong)\|var(--accent-muted)\|var(--border-subtle)" src
 ```
 Expected: **no matches.**
 - [ ] **Step 7: Update docs to match**
@@ -503,7 +503,7 @@ Expected: **no matches.**
 
 - [ ] **Step 8: Final verify — build + safety scan**
 ```bash
-cd "C:/Users/Kensyi15/Desktop/booking-system" && npm run build && npm run scan:all
+npm run build && npm run scan:all
 ```
 Expected: build succeeds; safety scan passes ("No secrets, credentials, or local paths detected"). Smoke every surface one more time: `/menu`, `/order/<code>`, `/staff`, `/staff/login`, `/staff/tables`, `/kitchen`, `/admin`.
 - [ ] **Step 9: Commit** (if authorized) — subject `Redesign login, QR, slip; remove rooftop asset; docs + final cleanup` + trailer.

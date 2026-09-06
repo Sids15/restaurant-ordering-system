@@ -1,9 +1,10 @@
 /* =============================================================================
-   BERLIN — Table QR provisioning (/staff/tables)
+   Table QR provisioning (/staff/tables)
    Form controls reuse the staff vocabulary (.st-field / .st-btn); this file adds
-   the printable card sheet. Screen: ivory cards on the dark app in a responsive
-   grid. Print: black-on-white, fixed card size, no card split across a page.
-   Consumes design tokens only.
+   the printable card sheet. Screen: raised cards on the app surface in a
+   responsive grid. Print: ink-on-white, fixed card size, no card split across a
+   page. Consumes design tokens only (the QR SVG's own ink/paper colors are a
+   server-generated exception, matched here for visual consistency).
    ========================================================================== */
 
 .tblq__form {
@@ -15,17 +16,17 @@
 .tblq__hint {
   max-width: none;
   font-size: var(--fs-caption);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .tblq__base {
   max-width: none;
   font-size: var(--fs-caption);
-  color: var(--text-muted);
-  border-inline-start: 2px solid var(--accent-muted);
+  color: var(--ink-muted);
+  border-inline-start: 2px solid var(--border-strong);
   padding-inline-start: var(--space-12);
 }
 .tblq__baseurl {
-  color: var(--text-strong);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   word-break: break-all;
 }
@@ -45,12 +46,12 @@
 .sheet__lead {
   max-width: none;
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-meta);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .sheet__lead strong {
-  color: var(--text-strong);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .sheet__grid {
@@ -61,21 +62,24 @@
 
 /* --- A single card -------------------------------------------------------- */
 .qrcard {
-  background: var(--color-ivory);
-  color: var(--color-warm-black);
+  background: var(--surface-raised);
+  color: var(--ink);
   padding: var(--space-24);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-16);
   text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 .qrcard__brand {
   font-family: var(--font-ui);
   font-size: var(--fs-caption);
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: #5b544a;
+  color: var(--ink-muted);
 }
 .qrcard__code {
   width: 100%;
@@ -89,8 +93,9 @@
 }
 .qrcard__table {
   font-family: var(--font-display);
-  font-size: var(--fs-heading-m);
+  font-size: var(--fs-heading-l);
   line-height: 1;
+  color: var(--ink);
 }
 .qrcard__word {
   margin-inline-end: var(--space-8);
@@ -99,12 +104,12 @@
   font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: #5b544a;
+  color: var(--ink-muted);
 }
 .qrcard__scan {
   max-width: none;
   font-size: var(--fs-caption);
-  color: #5b544a;
+  color: var(--ink-muted);
 }
 
 /* --- Mobile --------------------------------------------------------------- */
@@ -115,7 +120,7 @@
   }
 }
 
-/* --- Print: black-on-white card stock, laid out for cutting --------------- */
+/* --- Print: ink-on-white card stock, laid out for cutting ------------------ */
 @media print {
   body {
     background: #fff !important;
@@ -141,6 +146,8 @@
     background: #fff;
     color: #000;
     border: 1px dashed #000;
+    box-shadow: none;
+    border-radius: 0;
     break-inside: avoid;
     padding: 12mm 6mm;
   }

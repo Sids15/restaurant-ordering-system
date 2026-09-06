@@ -25,6 +25,9 @@
   --border: rgba(42, 37, 33, 0.1);
   --border-strong: rgba(42, 37, 33, 0.18);
 
+  /* --- Overlay -------------------------------------------------------------- */
+  --overlay-scrim: rgba(42, 37, 33, 0.45);
+
   /* --- Accent (derived from brand) ---------------------------------------- */
   --accent: var(--brand-accent);
   --accent-hover: color-mix(in srgb, var(--accent) 85%, #000);
@@ -95,11 +98,6 @@
   /* --- Containers --------------------------------------------------------- */
   --container-lg: 75rem;   /* 1200px */
   --container-md: 48rem;   /* 768px  */
-
-  /* Migration shims — old container names kept until later surface tasks drop
-     their usages; removed in the Task 6 cleanup. */
-  --container-xl: var(--container-lg);
-  --container-editorial: var(--container-md);
   --measure: 34rem;
   --gutter: clamp(1rem, 4vw, 2rem);
 
