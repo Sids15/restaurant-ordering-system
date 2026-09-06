@@ -15,15 +15,17 @@ interface Props {
   elsewhere?: string | null;
   /** The scanned code didn't verify — tell the guest instead of silently seating them nowhere. */
   invalid?: boolean;
+  /** Resolving the table blew up server-side (misconfig/outage) — show the failure page. */
+  errored?: boolean;
 }
-const { table, elsewhere = null, invalid = false } = Astro.props;
+const { table, elsewhere = null, invalid = false, errored = false } = Astro.props;
 
-const skipMenu = Boolean(elsewhere) || invalid;
+const skipMenu = Boolean(elsewhere) || invalid || errored;
 const result = skipMenu ? { ok: true as const, categories: [] } : await getCustomerMenu();
 
 // Three distinct outcomes: couldn't reach the menu, reached-but-empty, or a
 // real menu to render. Never let the first masquerade as the second.
-const failed = !result.ok;
+const failed = errored || !result.ok;
 
 const categories = result.ok
   ? result.categories.map((c) => ({

@@ -47,7 +47,8 @@ function setTabCookie(cookies: AstroCookies, token: string): void {
 export type MenuAccess =
   | { mode: "ok"; table: string | null }
   | { mode: "elsewhere"; table: string }
-  | { mode: "invalid" };
+  | { mode: "invalid" }
+  | { mode: "error" };
 
 /**
  * Decide what a guest sees at /menu or /menu/<token>. The URL segment is a
@@ -64,6 +65,23 @@ export type MenuAccess =
  *    (their order would then have no table attached and nobody would notice)
  */
 export async function resolveMenuAccess(
+  cookies: AstroCookies,
+  urlToken: string | null,
+): Promise<MenuAccess> {
+  try {
+    return await resolveMenuAccessOrThrow(cookies, urlToken);
+  } catch (err) {
+    // A misconfigured server (e.g. no SUPABASE_SERVICE_ROLE_KEY, so
+    // `supabaseAdmin()` throws) used to escape the page frontmatter as a 500
+    // with an empty body and no Content-Type — which browsers can't render, so
+    // a scanned QR became a mystery "save this file" prompt. Fail as a readable
+    // page instead; the cause belongs in the logs, not in a guest's face.
+    console.error("[menu] resolveMenuAccess threw:", err);
+    return { mode: "error" };
+  }
+}
+
+async function resolveMenuAccessOrThrow(
   cookies: AstroCookies,
   urlToken: string | null,
 ): Promise<MenuAccess> {

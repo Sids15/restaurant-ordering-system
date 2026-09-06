@@ -17,8 +17,9 @@ const access = await resolveMenuAccess(Astro.cookies, urlTable);
 const table = access.mode === "ok" ? access.table : null;
 const elsewhere = access.mode === "elsewhere" ? access.table : null;
 const invalid = access.mode === "invalid";
+const errored = access.mode === "error";
 ---
 
 <AppLayout title={`Menu — ${brand.name}`}>
-  <MenuView table={table} elsewhere={elsewhere} invalid={invalid} />
+  <MenuView table={table} elsewhere={elsewhere} invalid={invalid} errored={errored} />
 </AppLayout>
