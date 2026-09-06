@@ -100,22 +100,10 @@ main {
   padding-inline: var(--gutter);
 }
 
-.container--xl {
-  max-width: var(--container-lg);
-}
-
-.container--editorial {
-  max-width: var(--container-md);
-}
-
 .section {
   padding-block: var(--space-section);
   background-color: var(--surface);
   color: var(--ink);
-}
-
-.section--cinematic {
-  padding-block: var(--space-section-cinematic);
 }
 
 /* Small uppercase type — printed hotel-stationery feel (Section 7) */

@@ -138,6 +138,7 @@ export default function PendingQueue({
                   className="pcard__cancel"
                   onClick={() => act(o.code, "cancel")}
                   disabled={busy.has(o.code)}
+                  aria-label={`Cancel order ${o.code}`}
                 >
                   Cancel
                 </button>
@@ -146,6 +147,7 @@ export default function PendingQueue({
                   className="pcard__confirm"
                   onClick={() => act(o.code, "confirm")}
                   disabled={busy.has(o.code)}
+                  aria-label={`Confirm order ${o.code}`}
                 >
                   Confirm
                 </button>
