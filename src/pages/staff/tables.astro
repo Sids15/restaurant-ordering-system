@@ -12,6 +12,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
 import { signTableToken, tableTokensConfigured } from "../../lib/orders/table-token";
 import { optionalServerEnv } from "../../lib/env";
+import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 import "../../styles/table-qr.css";
 
@@ -68,9 +69,9 @@ const cards = tokensReady
 const prefill = labels.join(", ");
 ---
 
-<AppLayout title="Table QR codes — Berlin">
+<AppLayout title={`Table QR codes — ${brand.name}`}>
   <main class="st-shell tblq">
-    <StationMasthead eyebrow="Berlin · Back of house" title="Table QR codes">
+    <StationMasthead title="Table QR codes">
       <a class="st-back" slot="actions" href="/staff">
         <span aria-hidden="true">←</span> Order desk
       </a>
@@ -129,7 +130,7 @@ const prefill = labels.join(", ");
         <div class="sheet__grid">
           {cards.map((c) => (
             <article class="qrcard">
-              <p class="qrcard__brand">Berlin · Haus de Gourmet</p>
+              <p class="qrcard__brand">{brand.name}</p>
               <div class="qrcard__code" set:html={c.svg} />
               <p class="qrcard__table"><span class="qrcard__word">Table</span>{c.label}</p>
               <p class="qrcard__scan">Scan to view the menu &amp; order</p>

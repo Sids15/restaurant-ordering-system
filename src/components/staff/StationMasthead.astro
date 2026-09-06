@@ -1,16 +1,18 @@
 ---
 /**
  * StationMasthead — the shared header across the back-of-house area (order desk,
- * order builder, tabs). An uppercase eyebrow over a champagne rule, then the
- * page title in Bodoni; the right side is an `actions` slot so each station can
- * carry its own controls (identity + nav, or a return link) while the masthead
- * itself stays identical everywhere.
+ * order builder, tabs). An uppercase eyebrow over the restaurant's name, then the
+ * page title in the display face; the right side is an `actions` slot so each
+ * station can carry its own controls (identity + nav, or a return link) while
+ * the masthead itself stays identical everywhere.
  */
+import { brand } from "../../data/brand";
+
 interface Props {
   eyebrow?: string;
   title: string;
 }
-const { eyebrow = "Berlin · Back of house", title } = Astro.props;
+const { eyebrow = `${brand.name} · Back of house`, title } = Astro.props;
 ---
 
 <header class="masthead st-rise">
@@ -30,42 +32,34 @@ const { eyebrow = "Berlin · Back of house", title } = Astro.props;
     justify-content: space-between;
     gap: var(--space-24);
     padding-block-end: var(--space-24);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
   }
   .masthead__eyebrow {
     font-family: var(--font-ui);
     font-size: var(--fs-caption);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
   }
-  .masthead__eyebrow::after {
-    content: "";
-    display: block;
-    width: 2.75rem;
-    height: 1px;
-    margin-block-start: var(--space-16);
-    background: var(--accent-muted);
-  }
   .masthead__title {
-    margin-block-start: var(--space-20, 1.25rem);
+    margin-block-start: var(--space-8);
     font-family: var(--font-display);
-    font-size: var(--fs-display-s);
-    line-height: var(--lh-display);
+    font-size: var(--fs-heading-l);
+    line-height: var(--lh-heading);
     letter-spacing: var(--tracking-display);
-    color: var(--text-strong);
+    color: var(--ink);
   }
   .masthead__actions {
     flex: 0 0 auto;
-    padding-block-end: var(--space-8);
+    padding-block-end: var(--space-4);
   }
 
   @media (max-width: 40rem) {
     .masthead {
       flex-direction: column;
       align-items: flex-start;
-      gap: var(--space-20, 1.25rem);
+      gap: var(--space-16);
     }
     .masthead__actions {
       padding-block-end: 0;

@@ -8,6 +8,7 @@ import AppLayout from "../../../layouts/AppLayout.astro";
 import StationMasthead from "../../../components/staff/StationMasthead.astro";
 import { getOpenTabs } from "../../../lib/orders/tabs";
 import { formatINR } from "../../../lib/money";
+import { brand } from "../../../data/brand";
 import "../../../styles/staff.css";
 
 export const prerender = false;
@@ -29,9 +30,9 @@ function when(iso: string): string {
 }
 ---
 
-<AppLayout title="Open tabs — Berlin">
+<AppLayout title={`Open tabs — ${brand.name}`}>
   <main class="st-shell tabs">
-    <StationMasthead eyebrow="Berlin · Back of house" title="Open tabs">
+    <StationMasthead title="Open tabs">
       <a class="st-back" slot="actions" href="/staff">
         <span aria-hidden="true">←</span> Order desk
       </a>
@@ -76,65 +77,66 @@ function when(iso: string): string {
     gap: var(--space-8) var(--space-12);
     max-width: none;
     font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .tabs__stat strong {
-    font-weight: 500;
-    color: var(--text-strong);
+    font-weight: 600;
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .tabs__amt {
     color: var(--accent) !important;
   }
   .tabs__dot {
-    color: var(--accent-muted);
+    color: var(--border-strong);
   }
 
-  /* --- The ledger --------------------------------------------------------- */
-  /* A plain flex row with EXPLICIT margins — never relying on gap alone, so the
-     columns can't collapse into each other if the layout is ever overridden. */
+  /* --- The ledger ----------------------------------------------------------- */
   .ledger {
     display: flex;
     flex-direction: column;
-    border-top: 1px solid var(--border-subtle);
+    gap: var(--space-12);
   }
   .ledger__link {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    padding: var(--space-32) var(--space-24);
-    border-bottom: 1px solid var(--border-subtle);
-    color: var(--text);
-    transition: background-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    padding: var(--space-24);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    color: var(--ink);
+    transition: box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .ledger__link:hover {
-    background: color-mix(in srgb, var(--accent) 5%, transparent);
-    box-shadow: inset 2px 0 0 var(--accent);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
   }
   .ledger__table {
     flex: 0 0 auto;
-    margin-inline-end: var(--space-32);
+    margin-inline-end: var(--space-24);
     font-family: var(--font-display);
     font-size: var(--fs-heading-l);
     line-height: 1;
-    color: var(--text-strong);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .ledger__word {
-    margin-inline-end: var(--space-12);
+    margin-inline-end: var(--space-8);
     font-family: var(--font-ui);
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .ledger__meta {
     flex: 1 1 auto;
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
   .ledger__total {
@@ -150,8 +152,8 @@ function when(iso: string): string {
     flex: 0 0 auto;
     align-self: center;
     margin-inline-start: var(--space-16);
-    color: var(--text-muted);
-    transition: transform 0.3s var(--ease-out), color 0.3s var(--ease-out);
+    color: var(--ink-muted);
+    transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
   }
   .ledger__link:hover .ledger__go {
     color: var(--accent);

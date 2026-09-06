@@ -11,6 +11,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
 import { getCustomerMenu } from "../../lib/menu/queries";
 import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 import "../../styles/order-builder.css";
 
@@ -37,9 +38,9 @@ const VEG_LABEL: Record<string, string> = {
 };
 ---
 
-<AppLayout title="Build an order — Berlin">
+<AppLayout title={`Build an order — ${brand.name}`}>
   <main class="st-shell build">
-    <StationMasthead eyebrow="Berlin · Back of house" title="Build an order">
+    <StationMasthead title="Build an order">
       <a class="st-back" slot="actions" href="/staff">
         <span aria-hidden="true">←</span> Order desk
       </a>

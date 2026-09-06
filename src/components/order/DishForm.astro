@@ -95,20 +95,22 @@ const veg = item?.veg_type ?? "veg";
   }
   .field__label {
     font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .field__input {
     padding: var(--space-12) var(--space-16);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-strong);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
     font: inherit;
     /* ≥16px so iOS doesn't zoom-and-reflow on focus (body font is 15px). */
     font-size: max(1rem, var(--fs-body));
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
-  .field__input:focus {
+  .field__input:focus-visible {
     outline: none;
     border-color: var(--accent);
   }
@@ -123,23 +125,24 @@ const veg = item?.veg_type ?? "veg";
     display: flex;
     align-items: center;
     gap: var(--space-8);
-    color: var(--text);
+    color: var(--ink);
     font-size: var(--fs-caption);
   }
   .dish__submit {
     align-self: flex-start;
     min-height: var(--btn-height);
-    padding-inline: var(--space-32);
+    padding-inline: var(--btn-padding-inline);
     background: var(--accent);
-    color: var(--color-warm-black);
+    color: var(--on-accent);
     border: none;
+    border-radius: var(--radius-md);
     font: inherit;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-nav);
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out);
   }
   .dish__submit:hover {
-    opacity: 0.9;
+    background: var(--accent-hover);
   }
   @media (max-width: 30rem) {
     .field-row {

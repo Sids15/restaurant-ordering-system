@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from "react";
 import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
 import "./pending-queue.css";
 
 interface PendingLine {
@@ -26,7 +27,7 @@ interface PendingOrderData {
 }
 
 const POLL_MS = 4000;
-const BASE_TITLE = "Staff console — Berlin";
+const BASE_TITLE = `Staff console — ${brand.name}`;
 
 export default function PendingQueue({
   initialOrders,
@@ -107,11 +108,15 @@ export default function PendingQueue({
         {orders.map((o) => (
           <li key={o.code} className="pcard">
             <div className="pcard__top">
-              <span className="pcard__table">
-                {o.table_label ? `Table ${o.table_label}` : "No table"}
-              </span>
-              <span className="pcard__meta">
-                {o.code} · {o.waited_min}m
+              <div>
+                <span className="pcard__table">
+                  {o.table_label ? `Table ${o.table_label}` : "No table"}
+                </span>
+                <span className="pcard__code">{o.code}</span>
+              </div>
+              <span className="pcard__chip">
+                <span className="pcard__dot" aria-hidden="true" />
+                {o.waited_min}m
               </span>
             </div>
             <ul className="pcard__items">

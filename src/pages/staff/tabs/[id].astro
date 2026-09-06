@@ -3,8 +3,9 @@
  * Collective bill (Feature: billing) for one tab — every non-cancelled round's
  * items merged, with GST + service charge. A server can Close the tab (mark
  * paid), Move it to another table, Merge another table's tab into it, and Print.
- * Behind the auth middleware; billing is manager/server. On screen the bill is a
- * Berlin-tailored thermal receipt on the dark app; @media print goes black-on-white.
+ * Behind the auth middleware; billing is manager/server. On screen the bill
+ * reads as a clean, minimal ink-on-white receipt; @media print keeps it
+ * black-on-white for a thermal printer.
  */
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getTabBill } from "../../../lib/orders/tabs";
@@ -52,7 +53,7 @@ function stamp(iso: string): { date: string; time: string } {
 const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: "" };
 ---
 
-<AppLayout title={bill ? `Bill · Table ${bill.table_label} — Berlin` : "Tab not found — Berlin"}>
+<AppLayout title={bill ? `Bill · Table ${bill.table_label} — ${brand.name}` : `Tab not found — ${brand.name}`}>
   <main class="billwrap">
     {!bill ? (
       <p class="billwrap__missing">That tab doesn't exist.</p>
@@ -104,11 +105,10 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
         {err && <p class="st-alert st-alert--error no-print" role="alert">{err}</p>}
 
         <div class="receipt-wrap st-rise-2">
-          <div class="receipt__perf receipt__perf--top" aria-hidden="true"></div>
           <article class="receipt">
             <header class="receipt__head">
-              <p class="receipt__brand">Berlin</p>
-              <p class="receipt__subbrand">Haus de Gourmet</p>
+              <p class="receipt__brand">{brand.name}</p>
+              <p class="receipt__subbrand">{brand.tagline}</p>
               <p class="receipt__addr">{brand.contact.address.line1} · {brand.contact.address.line2}</p>
               <p class="receipt__doc">Tax Invoice</p>
             </header>
@@ -153,7 +153,6 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
               </p>
             </footer>
           </article>
-          <div class="receipt__perf receipt__perf--bottom" aria-hidden="true"></div>
         </div>
       </>
     )}
@@ -176,7 +175,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
   .billwrap__missing {
     padding-block: var(--space-64);
     text-align: center;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   /* --- Top bar + table operations ----------------------------------------- */
@@ -199,7 +198,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     min-width: 0;
     min-height: 2.75rem;
     padding-inline: var(--space-16);
-    font-size: var(--fs-label);
+    font-size: var(--fs-caption);
   }
 
   .ops {
@@ -207,8 +206,9 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     grid-template-columns: 1fr 1fr;
     gap: var(--space-24);
     padding: var(--space-24);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
   }
   .ops__form {
     display: flex;
@@ -217,10 +217,10 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
   }
   .ops__label {
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .ops__row {
     display: flex;
@@ -233,48 +233,36 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
   .ops__go {
     flex: 0 0 auto;
     min-height: 2.75rem;
-    padding-inline: var(--space-20, 1.25rem);
+    padding-inline: var(--space-24);
     font-size: var(--fs-label);
   }
 
-  /* --- The receipt — a Berlin-tailored thermal slip ----------------------- */
+  /* --- The receipt — a clean, minimal ink-on-white slip -------------------- */
   .receipt-wrap {
     align-self: center;
     width: 100%;
     max-width: 23rem;
-    filter: drop-shadow(0 24px 44px rgba(0, 0, 0, 0.4));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
   }
   .receipt {
-    background: var(--color-ivory);
-    color: var(--color-warm-black);
+    background: var(--surface-raised);
+    color: var(--ink);
+    border-radius: var(--radius-md);
     padding: var(--space-32) var(--space-24) var(--space-24);
     font-family: var(--font-ui);
-  }
-  /* Torn thermal edges, top and bottom. */
-  .receipt__perf {
-    height: 0.7rem;
-    background: var(--color-ivory);
-  }
-  .receipt__perf--top {
-    -webkit-mask: radial-gradient(0.4rem at 50% 0%, transparent 96%, #000) 0 0 / 0.8rem 0.7rem repeat-x;
-    mask: radial-gradient(0.4rem at 50% 0%, transparent 96%, #000) 0 0 / 0.8rem 0.7rem repeat-x;
-  }
-  .receipt__perf--bottom {
-    -webkit-mask: radial-gradient(0.4rem at 50% 100%, transparent 96%, #000) 0 100% / 0.8rem 0.7rem repeat-x;
-    mask: radial-gradient(0.4rem at 50% 100%, transparent 96%, #000) 0 100% / 0.8rem 0.7rem repeat-x;
   }
 
   .receipt__head {
     text-align: center;
     padding-block-end: var(--space-16);
-    border-bottom: 1px dashed #9a9184;
+    border-bottom: 1px dashed var(--border-strong);
   }
   .receipt__brand {
     font-family: var(--font-display);
     font-size: var(--fs-heading-m);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-warm-black);
+    letter-spacing: 0.04em;
+    color: var(--ink);
   }
   .receipt__subbrand {
     margin-block-start: var(--space-4);
@@ -282,14 +270,14 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: #5b544a;
+    color: var(--ink-muted);
   }
   .receipt__addr {
     margin: var(--space-12) auto 0;
     max-width: 16rem;
     font-size: var(--fs-caption);
-    line-height: 1.5;
-    color: #5b544a;
+    line-height: var(--lh-body);
+    color: var(--ink-muted);
   }
   .receipt__doc {
     margin-block-start: var(--space-12);
@@ -297,7 +285,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     font-weight: 600;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--color-champagne-muted);
+    color: var(--accent);
   }
 
   .receipt__meta {
@@ -305,7 +293,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     grid-template-columns: 1fr 1fr;
     gap: var(--space-8) var(--space-16);
     padding-block: var(--space-16);
-    border-bottom: 1px dashed #9a9184;
+    border-bottom: 1px dashed var(--border-strong);
   }
   .receipt__meta div {
     display: flex;
@@ -315,13 +303,13 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
   .receipt__meta dt {
     font-size: 0.6rem;
     font-weight: 500;
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: #8a8172;
+    color: var(--ink-muted);
   }
   .receipt__meta dd {
     font-size: var(--fs-caption);
-    color: var(--color-warm-black);
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
 
@@ -332,9 +320,9 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     padding-block: var(--space-12) var(--space-8);
     font-size: 0.6rem;
     font-weight: 600;
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: #8a8172;
+    color: var(--ink-muted);
   }
   .receipt__cols span:nth-child(3),
   .receipt__cols span:nth-child(4) {
@@ -351,16 +339,16 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     gap: var(--space-12);
     align-items: baseline;
     padding-block: var(--space-8);
-    border-bottom: 1px solid #e0d8c8;
+    border-bottom: 1px solid var(--border);
     font-size: var(--fs-body);
   }
   .receipt__q {
     font-variant-numeric: tabular-nums;
-    color: #5b544a;
+    color: var(--ink-muted);
   }
   .receipt__n {
     min-width: 0;
-    color: var(--color-warm-black);
+    color: var(--ink);
   }
   .receipt__rate,
   .receipt__amt {
@@ -369,10 +357,10 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     font-variant-numeric: tabular-nums;
   }
   .receipt__rate {
-    color: #5b544a;
+    color: var(--ink-muted);
   }
   .receipt__amt {
-    color: var(--color-warm-black);
+    color: var(--ink);
   }
 
   .receipt__totals {
@@ -380,7 +368,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     flex-direction: column;
     gap: var(--space-8);
     padding-block: var(--space-16);
-    border-top: 1px dashed #9a9184;
+    border-top: 1px dashed var(--border-strong);
   }
   .receipt__totals > div {
     display: flex;
@@ -389,22 +377,22 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     font-size: var(--fs-caption);
   }
   .receipt__totals dt {
-    color: #5b544a;
+    color: var(--ink-muted);
   }
   .receipt__totals dd {
     font-variant-numeric: tabular-nums;
-    color: var(--color-warm-black);
+    color: var(--ink);
   }
   .receipt__grand {
     margin-block-start: var(--space-8);
     padding-block-start: var(--space-12);
-    border-top: 1px solid #9a9184;
+    border-top: 1px solid var(--border-strong);
     align-items: baseline;
   }
   .receipt__grand dt {
     font-family: var(--font-display);
     font-size: var(--fs-heading-s);
-    color: var(--color-warm-black) !important;
+    color: var(--ink) !important;
   }
   .receipt__grand dd {
     font-family: var(--font-display);
@@ -425,19 +413,20 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     font-size: var(--fs-heading-s);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: #4c8b4a;
-    border: 1px solid #4c8b4a;
+    color: var(--status-ready);
+    background: var(--status-ready-soft);
+    border-radius: var(--radius-pill);
   }
   .receipt__fssai {
     font-size: 0.6rem;
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: #8a8172;
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
   .receipt__thanks {
     font-size: var(--fs-caption);
-    color: #5b544a;
+    color: var(--ink-muted);
   }
 
   @media (max-width: 32rem) {
@@ -455,7 +444,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     }
     :global(html),
     :global(body) {
-      background: var(--color-ivory) !important;
+      background: var(--surface-raised) !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -471,7 +460,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
       max-width: none;
       width: 100%;
       align-self: stretch;
-      filter: none;
+      box-shadow: none;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }

@@ -1,9 +1,8 @@
 /* =============================================================================
-   BERLIN — Haus de Gourmet · Order builder (/staff/new)
-   The manual order form dressed in the CUSTOMER MENU's vocabulary — the same
-   dish rows a guest sees (veg dot, signature mark, italic description, tags),
-   an "Add" button that morphs into the menu's stepper, and a live order bar.
-   No dotted leader: the name sits left, the price right.
+   Order builder (/staff/new) — the manual order form dressed in the CUSTOMER
+   MENU's vocabulary: dish cards with a veg dot, signature mark, italic
+   description and tags, an "Add" button that morphs into a stepper, and a
+   sticky order bar. The name sits left, the price right.
 
    GLOBAL stylesheet (imported by the page) rather than a scoped <style>, so a
    server-rendered edit can never leave the markup on a stale scope id while
@@ -14,14 +13,14 @@
 .build__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-48);
+  gap: var(--space-40);
   padding-block-end: var(--space-32);
 }
 
 .build__meta {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: var(--space-32);
+  gap: var(--space-24);
 }
 
 /* --- Filter bar (search + category chips + veg chips, from the guest menu) - */
@@ -30,28 +29,25 @@
   flex-direction: column;
   gap: var(--space-16);
   padding-block: var(--space-16);
-  border-block: 1px solid var(--border-subtle);
+  border-block: 1px solid var(--border);
 }
 .build__search {
   display: block;
 }
 .build__search input {
   width: min(100%, 24rem);
-  height: 2.75rem;
-  padding-block: var(--space-8);
+  height: var(--field-height);
+  padding-inline: var(--space-16);
   font-family: var(--font-ui);
   /* ≥16px so iOS doesn't zoom-and-reflow on focus (--fs-body is 15px). */
   font-size: max(1rem, var(--fs-body));
-  color: var(--text-strong);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
 }
 .build__search input::placeholder {
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: 0.03em;
+  color: var(--ink-muted);
 }
 .build__search input:focus-visible {
   border-color: var(--accent);
@@ -78,22 +74,21 @@
   font-family: var(--font-ui);
   font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: var(--tracking-meta);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
+  color: var(--ink-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: color 0.25s var(--ease-out), border-color 0.25s var(--ease-out),
-    background-color 0.25s var(--ease-out);
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 .chip:hover {
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .chip[aria-pressed="true"] {
-  color: var(--text-strong);
+  color: var(--on-accent);
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent);
 }
 .build__noresults {
   margin-block: var(--space-64);
@@ -102,7 +97,7 @@
   font-family: var(--font-display);
   font-style: italic;
   font-size: var(--fs-body-l);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 /* --- Category (carte heading) --------------------------------------------- */
@@ -125,42 +120,40 @@
   flex: 0 0 auto;
   font-family: var(--font-display);
   font-size: var(--fs-heading-m);
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .build__catrule {
   flex: 1 1 auto;
   height: 1px;
-  background: var(--border-subtle);
+  background: var(--border);
 }
 .build__list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-12);
 }
 
-/* --- Dish row (the customer menu's vocabulary) ---------------------------- */
+/* --- Dish (a soft card, echoing the guest menu) --------------------------- */
 .dish {
   display: flex;
   align-items: center;
-  gap: var(--space-24);
-  padding-block: var(--space-24);
-  padding-inline: var(--space-12);
-  border-bottom: 1px solid var(--border-subtle);
-  transition: background-color 0.25s var(--ease-out);
+  gap: var(--space-16);
+  padding: var(--space-16);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
 }
 @media (hover: hover) {
   .dish:hover {
-    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    box-shadow: var(--shadow-md);
   }
 }
-/* Signature dishes carry a faint candlelight wash and a gold edge. */
+/* Signature dishes carry a soft accent wash and an accent edge. */
 .dish--sig {
-  background: color-mix(in srgb, var(--accent) 4%, transparent);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-@media (hover: hover) {
-  .dish--sig:hover {
-    background: color-mix(in srgb, var(--accent) 9%, transparent);
-  }
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 /* Left: name, description, tags. */
 .dish__body {
@@ -174,7 +167,7 @@
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
   line-height: 1.2;
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .dish__sig {
   font-size: 0.7rem;
@@ -195,7 +188,7 @@
   font-family: var(--font-display);
   font-size: var(--fs-body-l);
   line-height: 1;
-  color: var(--text);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -205,8 +198,8 @@
   font-family: var(--font-display);
   font-style: italic;
   font-size: var(--fs-body);
-  line-height: 1.4;
-  color: var(--text-muted);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
 }
 /* Signature word + tags, tied together with mid-dots so they never run on. */
 .dish__meta {
@@ -219,10 +212,11 @@
 .dish__meta > * + *::before {
   content: "·";
   margin-inline-end: var(--space-8);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .dish__signword {
   font-size: var(--fs-label);
+  font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--accent);
@@ -231,7 +225,7 @@
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .dish__add {
   width: 100%;
@@ -248,6 +242,7 @@
   height: 0.95rem;
   flex: 0 0 auto;
   border: 1.5px solid currentColor;
+  border-radius: 2px;
 }
 .vegdot::after {
   content: "";
@@ -259,30 +254,35 @@
   border-radius: 50%;
   background: currentColor;
 }
-.vegdot--veg { color: #4c8b4a; }
-.vegdot--non_veg { color: #a33227; }
-.vegdot--egg { color: #b08a3c; }
+.vegdot--veg {
+  color: #2e7d32;
+}
+.vegdot--non_veg {
+  color: #a3312a;
+}
+.vegdot--egg {
+  color: #b3781c;
+}
 
-/* --- Add button — a full-width hairline that fills with candlelight -------- */
+/* --- Add button — fills with accent on hover ------------------------------ */
 .add {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   padding-inline: var(--space-16);
   font-size: var(--fs-caption);
-  font-weight: 500;
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--accent);
-  border: 1px solid var(--accent-muted);
+  background: var(--accent-soft);
+  border: none;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out), transform 0.15s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 .add:hover,
 .add:focus-visible {
   background: var(--accent);
-  color: var(--color-warm-black);
-  border-color: var(--accent);
+  color: var(--on-accent);
   outline: none;
 }
 .add:active {
@@ -295,44 +295,47 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 2.75rem;
-  border: 1px solid var(--accent);
+  height: 2.5rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
 }
 .stepper__btn {
   flex: 0 0 auto;
-  width: 2.75rem;
+  width: 2.5rem;
   height: 100%;
   font-size: var(--fs-body-l);
   line-height: 1;
   color: var(--accent);
   cursor: pointer;
-  transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 .stepper__btn:hover {
   background: var(--accent);
-  color: var(--color-warm-black);
+  color: var(--on-accent);
 }
 .stepper__qty {
   flex: 1 1 auto;
   text-align: center;
-  font-family: var(--font-display);
-  font-size: var(--fs-body-l);
+  font-family: var(--font-ui);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--ink);
 }
 
 /* --- Sticky order bar ----------------------------------------------------- */
 .buildbar {
   position: sticky;
   inset-block-end: calc(var(--space-16) + env(safe-area-inset-bottom, 0px));
-  z-index: 40;
+  z-index: var(--z-cartbar);
   display: flex;
   align-items: center;
   gap: var(--space-24);
   padding: var(--space-12) var(--space-12) var(--space-12) var(--space-24);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 .buildbar__info {
   display: flex;
@@ -342,16 +345,16 @@
 }
 .buildbar__count {
   font-size: var(--fs-label);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .buildbar__total {
   min-height: 1.6rem;
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text-strong);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .buildbar__submit {
@@ -363,11 +366,10 @@
 @media (max-width: 34rem) {
   .build__meta {
     grid-template-columns: 1fr;
-    gap: var(--space-40);
+    gap: var(--space-24);
   }
   .dish {
-    gap: var(--space-16);
-    padding-inline: 0;
+    gap: var(--space-12);
   }
   .buildbar {
     gap: var(--space-12);

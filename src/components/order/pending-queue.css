@@ -1,35 +1,51 @@
 /* =============================================================================
-   PendingQueue — the live "waiting to confirm" rail on the order desk.
-   Styled as a row of small kitchen dockets, matching the desk's pass vocabulary.
-   Consumes design tokens only.
+   PendingQueue — the live "waiting to confirm" rail on the order desk. Orders
+   read as compact cards; the status chip echoes the customer tracking page's
+   --status-pending vocabulary. Consumes design tokens only.
    ========================================================================== */
 
 .pending {
-  padding: var(--space-24) var(--space-24) var(--space-24) var(--space-20, 1.25rem);
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-elevated));
-  border-inline-start: 2px solid var(--accent);
-  animation: st-rise var(--dur-reveal) var(--ease-out) 60ms both;
+  padding: var(--space-24);
+  background: var(--accent-soft);
+  border-radius: var(--radius-lg);
+  animation: pending-rise var(--dur-reveal) var(--ease-out) both;
 }
 .pending--empty {
   background: transparent;
-  border-inline-start-color: var(--border-strong);
-  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-muted);
   font-size: var(--fs-caption);
-  padding-block: var(--space-16);
+  padding: var(--space-24);
+}
+@keyframes pending-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pending {
+    animation: none;
+  }
 }
 
 .pending__head {
   display: flex;
   align-items: center;
   gap: var(--space-12);
-  padding-block-end: var(--space-20, 1.25rem);
+  padding-block-end: var(--space-16);
 }
 .pending__title {
-  font-size: var(--fs-label);
-  font-weight: 500;
+  font-size: var(--fs-caption);
+  font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink);
 }
 .pending__count {
   display: inline-grid;
@@ -38,10 +54,11 @@
   height: 1.5rem;
   padding-inline: var(--space-4);
   font-size: var(--fs-caption);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-void);
+  color: var(--on-accent);
   background: var(--accent);
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
 }
 
 .pending__list {
@@ -49,31 +66,74 @@
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   gap: var(--space-16);
 }
+
+/* --- A single pending card ------------------------------------------------- */
 .pcard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
   padding: var(--space-16);
-  background: var(--color-void);
-  border-top: 2px solid var(--accent-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 .pcard__top {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-8);
 }
 .pcard__table {
+  display: block;
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text-strong);
+  color: var(--ink);
 }
-.pcard__meta {
+.pcard__code {
+  display: block;
+  margin-block-start: 2px;
   font-size: var(--fs-caption);
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+.pcard__chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--status-pending);
+  background: var(--status-pending-soft);
+  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
+.pcard__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pcard-pulse 1.6s var(--ease-out) infinite;
+}
+@keyframes pcard-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcard__dot {
+    animation: none;
+  }
+}
+
 .pcard__items {
   display: flex;
   flex-direction: column;
@@ -88,28 +148,30 @@
   flex: 0 0 auto;
   min-width: 2ch;
   color: var(--accent);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .pcard__name {
   min-width: 0;
-  color: var(--text);
+  color: var(--ink);
 }
 .pcard__inote {
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
+
 .pcard__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
-  padding-block-start: var(--space-16);
-  border-top: 1px dashed var(--accent-muted);
+  padding-block-start: var(--space-12);
+  border-top: 1px solid var(--border);
 }
 .pcard__total {
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
   font-variant-numeric: tabular-nums;
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .pcard__actions {
   display: flex;
@@ -117,37 +179,36 @@
 }
 .pcard__confirm,
 .pcard__cancel {
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   padding-inline: var(--space-16);
   font: inherit;
   font-weight: 600;
-  font-size: var(--fs-label);
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
+  font-size: var(--fs-caption);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out),
-    border-color 0.3s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 .pcard__confirm {
   background: var(--accent);
-  color: var(--color-warm-black);
+  color: var(--on-accent);
   border: 1px solid var(--accent);
 }
 .pcard__confirm:hover:not(:disabled) {
-  background: var(--color-white);
-  border-color: var(--color-white);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.pcard__cancel {
+  background: none;
+  color: var(--danger);
+  border: 1px solid var(--border);
+}
+.pcard__cancel:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
 }
 .pcard__confirm:disabled,
 .pcard__cancel:disabled {
   opacity: 0.5;
   cursor: progress;
-}
-.pcard__cancel {
-  background: none;
-  color: var(--text-muted);
-  border: 1px solid var(--border-strong);
-}
-.pcard__cancel:hover:not(:disabled) {
-  color: var(--text-strong);
-  border-color: var(--color-berlin-red);
 }

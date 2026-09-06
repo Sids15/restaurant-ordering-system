@@ -10,6 +10,7 @@ import StationMasthead from "../../components/staff/StationMasthead.astro";
 import PendingQueue from "../../components/order/PendingQueue.tsx";
 import { getStaffOrder, getPendingOrders } from "../../lib/orders/staff";
 import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 
 export const prerender = false;
@@ -50,7 +51,7 @@ function when(iso: string): string {
 }
 ---
 
-<AppLayout title="Staff console — Berlin">
+<AppLayout title={`Staff console — ${brand.name}`}>
   <main class="st-shell desk">
     <StationMasthead title="Order desk">
       <div class="st-actions" slot="actions">
@@ -121,76 +122,73 @@ function when(iso: string): string {
     )}
 
     {order && (
-      <div class="ticket st-rise-2">
-        <section class="docket" aria-label={`Order ${order.code}`}>
-          <header class="docket__head">
-            <div class="docket__ident">
-              <p class="docket__label">Docket</p>
-              <p class="docket__code">{order.code}</p>
-              <p class="docket__meta">
-                {order.table_label ? `Table ${order.table_label}` : "No table"} ·
-                {order.source === "customer" ? " Guest order" : " Server order"} ·
-                {" "}{when(order.created_at)}
-              </p>
-            </div>
-            <span class={`badge badge--${order.status}`}>{STATUS_LABEL[order.status]}</span>
-          </header>
-
-          <ul class="docket__lines">
-            {order.items.map((line) => (
-              <li class="docket__line">
-                <span class="docket__qty">{line.qty}×</span>
-                <span class="docket__name">
-                  {line.name}
-                  {line.notes && <span class="docket__lnote">{line.notes}</span>}
-                </span>
-                <span class="docket__price">{formatINR(line.price * line.qty)}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div class="docket__total">
-            <span>Subtotal</span>
-            <span>{formatINR(order.subtotal)}</span>
+      <section class="docket st-rise-2" aria-label={`Order ${order.code}`}>
+        <header class="docket__head">
+          <div class="docket__ident">
+            <p class="docket__label">Docket</p>
+            <p class="docket__code">{order.code}</p>
+            <p class="docket__meta">
+              {order.table_label ? `Table ${order.table_label}` : "No table"} ·
+              {order.source === "customer" ? " Guest order" : " Server order"} ·
+              {" "}{when(order.created_at)}
+            </p>
           </div>
+          <span class={`badge badge--${order.status}`}>{STATUS_LABEL[order.status]}</span>
+        </header>
 
-          {order.notes && <p class="docket__note">Note — {order.notes}</p>}
+        <ul class="docket__lines">
+          {order.items.map((line) => (
+            <li class="docket__line">
+              <span class="docket__qty">{line.qty}×</span>
+              <span class="docket__name">
+                {line.name}
+                {line.notes && <span class="docket__lnote">{line.notes}</span>}
+              </span>
+              <span class="docket__price">{formatINR(line.price * line.qty)}</span>
+            </li>
+          ))}
+        </ul>
 
-          <div class="docket__links">
-            <a class="docket__link" href={`/staff/orders/${order.code}/slip`}>Print slip</a>
-            {order.tab_id && <a class="docket__link" href={`/staff/tabs/${order.tab_id}`}>Bill · Table {order.table_label}</a>}
+        <div class="docket__total">
+          <span>Subtotal</span>
+          <span>{formatINR(order.subtotal)}</span>
+        </div>
+
+        {order.notes && <p class="docket__note">Note — {order.notes}</p>}
+
+        <div class="docket__links">
+          <a class="docket__link" href={`/staff/orders/${order.code}/slip`}>Print slip</a>
+          {order.tab_id && <a class="docket__link" href={`/staff/tabs/${order.tab_id}`}>Bill · Table {order.table_label}</a>}
+        </div>
+
+        {canTake && order.status === "pending" && (
+          <div class="actions">
+            <form method="post" action={`/api/staff/orders/${order.code}`}>
+              <input type="hidden" name="action" value="confirm" />
+              <button class="st-btn st-btn--primary actions__confirm" type="submit">
+                <span>Confirm order</span>
+                <svg class="st-btn__arrow" width="30" height="8" viewBox="0 0 30 8" fill="none" aria-hidden="true">
+                  <path d="M0 4h28M28 4l-5-3.25M28 4l-5 3.25" stroke="currentColor" stroke-width="1" stroke-linecap="square" />
+                </svg>
+              </button>
+            </form>
+            <form method="post" action={`/api/staff/orders/${order.code}`}>
+              <input type="hidden" name="action" value="cancel" />
+              <button class="st-btn st-btn--ghost" type="submit">Cancel</button>
+            </form>
           </div>
+        )}
 
-          {canTake && order.status === "pending" && (
-            <div class="actions">
-              <form method="post" action={`/api/staff/orders/${order.code}`}>
-                <input type="hidden" name="action" value="confirm" />
-                <button class="st-btn st-btn--primary actions__confirm" type="submit">
-                  <span>Confirm order</span>
-                  <svg class="st-btn__arrow" width="30" height="8" viewBox="0 0 30 8" fill="none" aria-hidden="true">
-                    <path d="M0 4h28M28 4l-5-3.25M28 4l-5 3.25" stroke="currentColor" stroke-width="1" stroke-linecap="square" />
-                  </svg>
-                </button>
-              </form>
-              <form method="post" action={`/api/staff/orders/${order.code}`}>
-                <input type="hidden" name="action" value="cancel" />
-                <button class="st-btn st-btn--ghost" type="submit">Cancel</button>
-              </form>
-            </div>
-          )}
-
-          {canTake && order.status === "confirmed" && (
-            <div class="actions">
-              <p class="actions__done">Confirmed. The kitchen board will pick it up.</p>
-              <form method="post" action={`/api/staff/orders/${order.code}`}>
-                <input type="hidden" name="action" value="cancel" />
-                <button class="st-btn st-btn--ghost" type="submit">Cancel</button>
-              </form>
-            </div>
-          )}
-        </section>
-        <div class="docket__perf" aria-hidden="true"></div>
-      </div>
+        {canTake && order.status === "confirmed" && (
+          <div class="actions">
+            <p class="actions__done">Confirmed. The kitchen board will pick it up.</p>
+            <form method="post" action={`/api/staff/orders/${order.code}`}>
+              <input type="hidden" name="action" value="cancel" />
+              <button class="st-btn st-btn--ghost" type="submit">Cancel</button>
+            </form>
+          </div>
+        )}
+      </section>
     )}
   </main>
 </AppLayout>
@@ -209,10 +207,10 @@ function when(iso: string): string {
   }
   .lookup__label {
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .lookup__row {
     display: flex;
@@ -224,42 +222,29 @@ function when(iso: string): string {
     max-width: 32rem;
   }
   .lookup__field {
-    position: relative;
     flex: 1 1 auto;
-  }
-  .lookup__field::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    inset-block-end: 0;
-    height: 1px;
-    background: var(--accent);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.45s var(--ease-out);
-  }
-  .lookup__field:focus-within::after {
-    transform: scaleX(1);
   }
   .lookup__input {
     width: 100%;
-    padding: var(--space-12) 0;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border-strong);
-    color: var(--text-strong);
+    height: var(--btn-height);
+    padding-inline: var(--space-16);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--ink);
     font: inherit;
     font-family: var(--font-display);
     font-size: var(--fs-heading-m);
-    letter-spacing: 0.14em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    border-radius: 0;
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
   .lookup__input::placeholder {
-    color: var(--text-muted);
-    opacity: 0.45;
+    color: var(--ink-muted);
+    opacity: 0.6;
   }
-  .lookup__input:focus {
+  .lookup__input:focus-visible {
+    border-color: var(--accent);
     outline: none;
   }
   .lookup__go {
@@ -268,42 +253,31 @@ function when(iso: string): string {
   .lookup__hint {
     max-width: none;
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
-  /* --- The docket — a kitchen pass slip (the signature) ------------------- */
-  .ticket {
-    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35));
-  }
+  /* --- The docket — order detail card -------------------------------------- */
   .docket {
-    background: var(--bg-elevated);
-    border-top: 2px solid var(--accent);
-    padding: clamp(var(--space-24), 4vw, var(--space-40));
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: clamp(var(--space-24), 4vw, var(--space-32));
     display: flex;
     flex-direction: column;
     gap: var(--space-24);
   }
-  /* Torn, perforated bottom edge — this is a printed docket. */
-  .docket__perf {
-    height: 0.75rem;
-    background: var(--bg-elevated);
-    -webkit-mask: radial-gradient(0.42rem at 50% 100%, transparent 96%, #000)
-      0 100% / 0.9rem 0.75rem repeat-x;
-    mask: radial-gradient(0.42rem at 50% 100%, transparent 96%, #000)
-      0 100% / 0.9rem 0.75rem repeat-x;
-  }
-
   .docket__head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-16);
-    padding-block-end: var(--space-24);
-    border-bottom: 1px dashed var(--accent-muted);
+    padding-block-end: var(--space-16);
+    border-bottom: 1px solid var(--border);
   }
   .docket__label {
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
@@ -313,40 +287,46 @@ function when(iso: string): string {
     font-family: var(--font-display);
     font-size: var(--fs-heading-l);
     line-height: 1;
-    letter-spacing: 0.12em;
-    color: var(--text-strong);
+    letter-spacing: 0.06em;
+    color: var(--ink);
   }
   .docket__meta {
-    margin-block-start: var(--space-12);
+    margin-block-start: var(--space-8);
     max-width: none;
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
   .badge {
     flex: 0 0 auto;
     padding: var(--space-4) var(--space-12);
     font-size: var(--fs-label);
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
+    border-radius: var(--radius-pill);
     white-space: nowrap;
   }
   .badge--pending {
-    border-color: var(--accent);
-    color: var(--accent);
+    color: var(--status-pending);
+    background: var(--status-pending-soft);
   }
-  .badge--confirmed,
-  .badge--preparing,
+  .badge--confirmed {
+    color: var(--status-confirmed);
+    background: var(--status-confirmed-soft);
+  }
+  .badge--preparing {
+    color: var(--status-preparing);
+    background: var(--status-preparing-soft);
+  }
   .badge--ready,
   .badge--served {
-    border-color: #4c8b4a;
-    color: #6fae5c;
+    color: var(--status-ready);
+    background: var(--status-ready-soft);
   }
   .badge--cancelled {
-    border-color: var(--color-berlin-red);
-    color: #c76b60;
+    color: var(--danger);
+    background: var(--danger-soft);
   }
 
   .docket__lines {
@@ -357,8 +337,8 @@ function when(iso: string): string {
     display: flex;
     align-items: baseline;
     gap: var(--space-16);
-    padding-block: var(--space-16);
-    border-bottom: 1px solid var(--border-subtle);
+    padding-block: var(--space-12);
+    border-bottom: 1px solid var(--border);
   }
   .docket__line:first-child {
     padding-block-start: 0;
@@ -367,23 +347,24 @@ function when(iso: string): string {
     flex: 0 0 auto;
     min-width: 2ch;
     color: var(--accent);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .docket__name {
     flex: 1 1 auto;
-    color: var(--text);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
   }
   .docket__lnote {
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .docket__price {
     flex: 0 0 auto;
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    color: var(--ink);
   }
   .docket__total {
     display: flex;
@@ -392,14 +373,14 @@ function when(iso: string): string {
     gap: var(--space-16);
     padding-block-start: var(--space-4);
     font-size: var(--fs-body-l);
-    color: var(--text-strong);
+    color: var(--ink);
   }
   .docket__total span:first-child {
     font-size: var(--fs-label);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .docket__total span:last-child {
     font-family: var(--font-display);
@@ -410,9 +391,10 @@ function when(iso: string): string {
     max-width: none;
     padding: var(--space-12) var(--space-16);
     font-size: var(--fs-caption);
-    color: var(--text);
-    background: color-mix(in srgb, var(--accent) 7%, transparent);
-    border-inline-start: 2px solid var(--accent-muted);
+    color: var(--ink);
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    border-inline-start: 3px solid var(--accent);
   }
   .docket__links {
     display: flex;
@@ -421,26 +403,21 @@ function when(iso: string): string {
   }
   .docket__link {
     font-size: var(--fs-caption);
-    font-weight: 500;
-    letter-spacing: var(--tracking-nav);
-    text-transform: uppercase;
+    font-weight: 600;
     color: var(--accent);
-    border-bottom: 1px solid var(--accent-muted);
-    padding-block-end: var(--space-4);
-    transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+    transition: color var(--dur-fast) var(--ease-out);
   }
   .docket__link:hover {
-    color: var(--text-strong);
-    border-color: var(--accent);
+    color: var(--accent-hover);
   }
 
-  /* --- Actions ------------------------------------------------------------ */
+  /* --- Actions -------------------------------------------------------------- */
   .actions {
     display: flex;
     align-items: center;
     gap: var(--space-16);
-    padding-block-start: var(--space-24);
-    border-top: 1px dashed var(--accent-muted);
+    padding-block-start: var(--space-16);
+    border-top: 1px solid var(--border);
     flex-wrap: wrap;
   }
   .actions__confirm {
@@ -449,14 +426,14 @@ function when(iso: string): string {
   .actions__done {
     flex: 1 1 12rem;
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   @media (max-width: 34rem) {
     .lookup__row {
       flex-direction: column;
       align-items: stretch;
-      gap: var(--space-24);
+      gap: var(--space-16);
     }
     .lookup__go {
       width: 100%;
