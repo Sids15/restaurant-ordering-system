@@ -11,6 +11,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 import OrderStatus from "../../components/order/OrderStatus.tsx";
 import { getTrackedOrder } from "../../lib/orders/track";
 import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
 
 export const prerender = false;
 
@@ -22,20 +23,22 @@ if (!order) {
 }
 
 // A QR of the plain code — staff scan or key it in to pull up the order.
+// Colors match the app's ink-on-paper tokens (fixed hex — QR rendering runs
+// server-side and can't consume CSS custom properties).
 const qrSvg = order
   ? await QRCode.toString(order.code, {
       type: "svg",
       margin: 1,
-      color: { dark: "#171512", light: "#e9e2d4" },
+      color: { dark: "#2a2521", light: "#ffffff" },
     })
   : "";
 ---
 
-<AppLayout title={order ? `Order ${order.code} — Berlin` : "Order not found — Berlin"}>
+<AppLayout title={order ? `Order ${order.code} — ${brand.name}` : `Order not found — ${brand.name}`}>
   {
     !order ? (
       <main class="track track--missing">
-        <p class="track__eyebrow">Berlin · Haus de Gourmet</p>
+        <p class="track__eyebrow">{brand.name}</p>
         <h1 class="track__title">Order not found</h1>
         <p class="track__note">
           We couldn't find an order for that code. Please check it, or place a new
@@ -46,26 +49,22 @@ const qrSvg = order
     ) : (
       <main class="track">
         <header class="track__head">
-          <p class="track__eyebrow">Berlin · Haus de Gourmet</p>
+          <p class="track__eyebrow">{brand.name}</p>
           <h1 class="track__title">Your order</h1>
           <p class="track__sub">Keep this ticket until your order reaches the table.</p>
-          <div class="track__rule" aria-hidden="true"><span class="track__mark">✦</span></div>
           {order.table_label && <p class="track__table">Table {order.table_label}</p>}
         </header>
 
         <OrderStatus client:load code={order.code} initialState={order.state} />
 
-        <div class="pass-wrap">
-          <section class="pass" aria-label="Your order code">
-            <div class="pass__qr" set:html={qrSvg} />
-            <div class="pass__meta">
-              <p class="pass__label">Order code</p>
-              <p class="pass__code">{order.code}</p>
-              <p class="pass__hint">Show this to a server to confirm your order.</p>
-            </div>
-          </section>
-          <div class="pass__perf" aria-hidden="true"></div>
-        </div>
+        <section class="pass" aria-label="Your order code">
+          <div class="pass__qr" set:html={qrSvg} />
+          <div class="pass__meta">
+            <p class="pass__label">Order code</p>
+            <p class="pass__code">{order.code}</p>
+            <p class="pass__hint">Show this to a server to confirm your order.</p>
+          </div>
+        </section>
 
         <section class="summary" aria-label="Order summary">
           <h2 class="summary__title">Summary</h2>
@@ -109,17 +108,18 @@ const qrSvg = order
 
 <style>
   .track {
-    max-width: 37rem;
+    max-width: var(--container-md);
     margin-inline: auto;
-    padding: clamp(var(--space-40), 8vw, var(--space-80)) var(--gutter) var(--space-80);
+    padding: clamp(var(--space-40), 8vw, var(--space-64)) var(--gutter) var(--space-64);
     display: flex;
     flex-direction: column;
-    gap: var(--space-32);
+    gap: var(--space-24);
   }
   .track--missing {
     min-height: 100svh;
     justify-content: center;
     text-align: center;
+    gap: var(--space-16);
   }
   .track__head {
     text-align: center;
@@ -128,7 +128,6 @@ const qrSvg = order
     align-items: center;
   }
   .track__eyebrow {
-    font-family: var(--font-ui);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
@@ -136,87 +135,77 @@ const qrSvg = order
     color: var(--accent);
   }
   .track__title {
-    margin-block-start: var(--space-16);
+    margin-block-start: var(--space-8);
     font-family: var(--font-display);
-    font-size: var(--fs-display-m);
-    line-height: 0.95;
-    letter-spacing: var(--tracking-display);
-    color: var(--text-strong);
+    font-size: var(--fs-display-l);
+    color: var(--ink);
   }
   .track__sub {
-    margin: var(--space-16) auto 0;
+    margin: var(--space-8) auto 0;
     max-width: 24rem;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: var(--fs-body-l);
-    line-height: 1.4;
-    color: var(--text-muted);
-  }
-  /* A centred fleuron flanked by hairlines — the menu's carte device. */
-  .track__rule {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: var(--space-16);
-    width: 12rem;
-    margin: var(--space-32) auto 0;
-    color: var(--accent);
-  }
-  .track__rule::before,
-  .track__rule::after {
-    content: "";
-    height: 1px;
-    background: var(--border-strong);
-  }
-  .track__mark {
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
-    transform: translateY(-0.05em);
+    color: var(--ink-muted);
   }
   .track__table {
-    margin-block-start: var(--space-24);
-    padding: var(--space-8) var(--space-16);
+    display: inline-flex;
+    margin-block-start: var(--space-16);
+    padding: var(--space-4) var(--space-12);
     font-size: var(--fs-caption);
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
-    border: 1px solid var(--accent-muted);
+    background: var(--accent-soft);
+    border-radius: var(--radius-pill);
   }
   .track__note {
     margin: 0 auto;
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   /* --- Status banner (OrderStatus island) -------------------------------- */
   .track :global(.status) {
     display: flex;
-    align-items: center;
-    gap: var(--space-16);
+    flex-direction: column;
+    gap: var(--space-12);
     padding: var(--space-24);
-    border: 1px solid var(--border-subtle);
-    border-inline-start: 2px solid var(--accent);
-    background: var(--bg-elevated);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
-  .track :global(.status__pulse) {
+  .track :global(.status__chip) {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8) var(--space-16);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    border-radius: var(--radius-pill);
+  }
+  .track :global(.status__chip--pending) {
+    color: var(--status-pending);
+    background: var(--status-pending-soft);
+  }
+  .track :global(.status__chip--confirmed) {
+    color: var(--status-confirmed);
+    background: var(--status-confirmed-soft);
+  }
+  .track :global(.status__chip--cancelled) {
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+  .track :global(.status__dot) {
     flex: 0 0 auto;
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
-    background: var(--accent);
+    background: currentColor;
   }
-  .track :global(.status--waiting .status__pulse) {
-    animation: pulse 1.6s var(--ease-smooth) infinite;
-  }
-  .track :global(.status--placed) {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
-  }
-  .track :global(.status--placed .status__pulse) {
-    background: #4c8b4a;
-  }
-  .track :global(.status--cancelled .status__pulse) {
-    background: var(--color-berlin-red);
+  .track :global(.status__chip--pending .status__dot) {
+    animation: pulse 1.6s var(--ease-out) infinite;
   }
   @keyframes pulse {
     0%,
@@ -229,37 +218,73 @@ const qrSvg = order
       transform: scale(0.7);
     }
   }
-  .track :global(.status__title) {
-    font-family: var(--font-display);
-    font-size: var(--fs-heading-s);
-    color: var(--text-strong);
-    letter-spacing: 0;
-  }
   .track :global(.status__note) {
-    margin-block-start: var(--space-4);
     font-size: var(--fs-body);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
-  /* --- Pass (code + QR) — an ivory boarding-pass with a torn edge --------- */
-  .pass-wrap {
-    filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.35));
+  /* --- Milestone stepper (waiting → placed) ------------------------------- */
+  .track :global(.status__steps) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    margin-block-start: var(--space-4);
   }
+  .track :global(.status__step) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+  .track :global(.status__step)::before {
+    content: "";
+    flex: 1 1 2rem;
+    order: -1;
+    height: 1px;
+    background: var(--border-strong);
+    margin-inline-end: var(--space-8);
+  }
+  .track :global(.status__step:first-child)::before {
+    display: none;
+    margin-inline-end: 0;
+  }
+  .track :global(.status__step-dot) {
+    flex: 0 0 auto;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--surface-raised);
+  }
+  .track :global(.status__step.is-done .status__step-dot) {
+    border-color: var(--status-confirmed);
+    background: var(--status-confirmed);
+  }
+  .track :global(.status__step.is-done) {
+    color: var(--ink);
+  }
+
+  /* --- Pass (code + QR) ---------------------------------------------------- */
   .pass {
     display: flex;
     align-items: center;
-    gap: var(--space-32);
-    padding: var(--space-32) var(--space-24);
-    background: var(--color-ivory);
-    color: var(--color-warm-black);
+    gap: var(--space-24);
+    padding: var(--space-24);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
   .pass__qr {
     flex: 0 0 auto;
-    width: 8rem;
-    height: 8rem;
+    width: 7rem;
+    height: 7rem;
     padding: var(--space-8);
-    background: var(--color-ivory);
-    border: 1px solid #cfc5b2;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
   }
   .pass__qr :global(svg) {
     width: 100%;
@@ -271,35 +296,36 @@ const qrSvg = order
     font-weight: 500;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: var(--color-champagne-muted);
+    color: var(--ink-muted);
   }
   .pass__code {
-    margin-block-start: var(--space-8);
+    margin-block-start: var(--space-4);
     font-family: var(--font-display);
-    font-size: var(--fs-display-s);
+    font-size: var(--fs-heading-l);
     line-height: 1;
-    letter-spacing: 0.12em;
-    color: var(--color-warm-black);
+    letter-spacing: 0.08em;
+    color: var(--ink);
   }
   .pass__hint {
-    margin-block-start: var(--space-12);
+    margin-block-start: var(--space-8);
     font-size: var(--fs-caption);
-    color: #5b544a;
-  }
-  .pass__perf {
-    height: 0.7rem;
-    background: var(--color-ivory);
-    -webkit-mask: radial-gradient(0.4rem at 50% 100%, transparent 96%, #000) 0 100% / 0.8rem 0.7rem repeat-x;
-    mask: radial-gradient(0.4rem at 50% 100%, transparent 96%, #000) 0 100% / 0.8rem 0.7rem repeat-x;
+    color: var(--ink-muted);
   }
 
   /* --- Summary ------------------------------------------------------------ */
+  .summary {
+    padding: var(--space-24);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
   .summary__title {
     font-family: var(--font-display);
     font-size: var(--fs-heading-m);
-    color: var(--text-strong);
+    color: var(--ink);
     padding-block-end: var(--space-16);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
   }
   .summary__list {
     display: flex;
@@ -309,28 +335,33 @@ const qrSvg = order
     display: flex;
     align-items: baseline;
     gap: var(--space-16);
-    padding-block: var(--space-16);
-    border-bottom: 1px solid var(--border-subtle);
+    padding-block: var(--space-12);
+    border-bottom: 1px solid var(--border);
+  }
+  .summary__line:last-child {
+    border-bottom: none;
   }
   .summary__qty {
     flex: 0 0 auto;
     color: var(--accent);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .summary__name {
     flex: 1 1 auto;
-    color: var(--text);
+    color: var(--ink);
   }
   .summary__price {
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    color: var(--ink);
   }
   .summary__total {
     display: flex;
     justify-content: space-between;
     padding-block-start: var(--space-16);
     font-size: var(--fs-body-l);
-    color: var(--text-strong);
+    font-weight: 600;
+    color: var(--ink);
   }
   .summary__total span:last-child {
     font-variant-numeric: tabular-nums;
@@ -338,7 +369,7 @@ const qrSvg = order
   .summary__notes {
     margin-block-start: var(--space-12);
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
 
   .track__links {
@@ -351,29 +382,24 @@ const qrSvg = order
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
-    gap: var(--space-12);
+    gap: var(--space-8);
     font-size: var(--fs-caption);
-    font-weight: 500;
-    letter-spacing: var(--tracking-nav);
-    text-transform: uppercase;
+    font-weight: 600;
     color: var(--accent);
-    border-bottom: 1px solid var(--accent-muted);
-    padding-block-end: var(--space-4);
-    transition: color 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+    transition: color var(--dur-fast) var(--ease-out);
   }
   .track__link svg {
-    transition: transform 0.35s var(--ease-out);
+    transition: transform var(--dur-fast) var(--ease-out);
   }
   .track__link:hover {
-    color: var(--text-strong);
-    border-color: var(--accent);
+    color: var(--accent-hover);
   }
   .track__link:hover svg {
     transform: translateX(4px);
   }
   .track--missing .track__link {
     align-self: center;
-    margin-block-start: var(--space-24);
+    margin-block-start: var(--space-16);
   }
 
   @media (max-width: 30rem) {

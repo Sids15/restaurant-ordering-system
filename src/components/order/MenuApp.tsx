@@ -1,29 +1,14 @@
 /**
- * MenuApp — the customer ordering island, styled as "La Carte, day to night".
+ * MenuApp — the customer ordering island.
  *
  * Server-rendered menu data comes in as props; everything interactive lives
  * here: dietary filter, search, category jump-nav, and the cart (a sticky bar
  * that expands into a bottom-sheet to review + place the order). The cart
  * persists to localStorage keyed by table, so a refresh mid-browse keeps it.
  *
- * The page reads like a printed carte that dims as you scroll: it opens on warm
- * paper in daylight and sinks, course by course, into the site's candlelit
- * void-and-champagne. An IntersectionObserver tracks which course is at the top
- * and rewrites the semantic color tokens on the root; the CSS glides between
- * them. Legibility is guaranteed by the ramp (see PALETTE below): light grounds
- * always carry dark ink, dark grounds always carry ivory — no muddy middle.
- *
  * Placing an order POSTs to /api/orders and navigates to /order/<code>.
  */
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
-import Lenis from "lenis";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { VegType } from "../../lib/types";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -57,158 +42,7 @@ const VEG_FILTERS: { key: VegType; label: string }[] = [
   { key: "egg", label: "Egg" },
 ];
 
-const storageKey = (table: string | null) => `berlin.cart.${table ?? "na"}`;
-
-/** Course numerals for the carte's section headers. */
-const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV"];
-const roman = (n: number) => ROMAN[n - 1] ?? String(n);
-
-/* ============================================================ day → night ramp
-
-   One CONTINUOUS ramp from paper daylight to candlelit void, mapped straight to
-   scroll progress so the ground glides at a constant rate — no holds, no jumps.
-   The ink→ivory flip is driven by the background's own luminance (crossfaded
-   right where the two contrasts cross), so text stays legible the whole way
-   without a muddy resting point. The accent crosses muted-gold → champagne with
-   it. Everything derives from this one function of `t`.
-   ---------------------------------------------------------------------------- */
-type RGBA = [number, number, number, number];
-const hex = (h: string): RGBA => {
-  const n = h.replace("#", "");
-  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16), 1];
-};
-const a = (r: number, g: number, b: number, alpha: number): RGBA => [r, g, b, alpha];
-const lerp = (x: number, y: number, t: number) => x + (y - x) * t;
-const lerpRGBA = (c: RGBA, d: RGBA, t: number): RGBA => [
-  lerp(c[0], d[0], t),
-  lerp(c[1], d[1], t),
-  lerp(c[2], d[2], t),
-  lerp(c[3], d[3], t),
-];
-const css = (c: RGBA) =>
-  `rgba(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])}, ${Number(c[3].toFixed(3))})`;
-const smoothstep = (x: number) => {
-  const t = Math.max(0, Math.min(1, x));
-  return t * t * (3 - 2 * t);
-};
-/** Move a colour toward black (amt<0) or white (amt>0). */
-const shade = (c: RGBA, amt: number): RGBA =>
-  amt < 0
-    ? [c[0] * (1 + amt), c[1] * (1 + amt), c[2] * (1 + amt), c[3]]
-    : [c[0] + (255 - c[0]) * amt, c[1] + (255 - c[1]) * amt, c[2] + (255 - c[2]) * amt, c[3]];
-const lum = (c: RGBA) => (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
-
-/** Warm ground ramp — paper → sand → amber dusk → mahogany → void. */
-const BG_RAMP: { t: number; c: RGBA }[] = [
-  { t: 0.0, c: hex("#dcd2c0") },
-  { t: 0.22, c: hex("#cdbe9b") },
-  { t: 0.42, c: hex("#b29a70") },
-  { t: 0.55, c: hex("#7a6344") },
-  { t: 0.68, c: hex("#3d2f22") },
-  { t: 0.84, c: hex("#1b1610") },
-  { t: 1.0, c: hex("#0a0a08") },
-];
-const rampBg = (t: number): RGBA => {
-  const clamped = Math.max(0, Math.min(1, t));
-  let i = 0;
-  while (i < BG_RAMP.length - 2 && clamped > BG_RAMP[i + 1].t) i++;
-  const lo = BG_RAMP[i];
-  const hi = BG_RAMP[i + 1];
-  return lerpRGBA(lo.c, hi.c, (clamped - lo.t) / ((hi.t - lo.t) || 1));
-};
-
-/** Ink-on-light and ivory-on-dark anchor sets; crossfaded by ground luminance. */
-const LIGHT = {
-  text: hex("#1a1712"),
-  muted: hex("#5b544a"),
-  strong: hex("#0f0e0c"),
-  accent: hex("#7a663a"),
-  accentMuted: hex("#9b8557"),
-  border: a(23, 21, 18, 0.18),
-  borderStrong: a(23, 21, 18, 0.32),
-};
-const DARK = {
-  text: hex("#e9e2d4"),
-  muted: hex("#bdb5a5"),
-  strong: hex("#f5f2ea"),
-  accent: hex("#b49a63"),
-  accentMuted: hex("#806e48"),
-  border: a(233, 226, 212, 0.14),
-  borderStrong: a(233, 226, 212, 0.28),
-};
-
-interface Palette {
-  bg: RGBA;
-  elevated: RGBA;
-  text: RGBA;
-  muted: RGBA;
-  strong: RGBA;
-  accent: RGBA;
-  accentMuted: RGBA;
-  border: RGBA;
-  borderStrong: RGBA;
-}
-function paletteAt(t: number): Palette {
-  const bg = rampBg(t);
-  // 0 while the ground is light (ink), 1 once it's dark (ivory); centred where
-  // the two contrasts cross (~luminance 0.33) so the pick is always the legible
-  // one, and the flip stays tight enough to never rest in a muddy middle.
-  const mix = smoothstep((0.45 - lum(bg)) / 0.24);
-  return {
-    bg,
-    elevated: lerpRGBA(shade(bg, -0.08), shade(bg, 0.1), mix),
-    text: lerpRGBA(LIGHT.text, DARK.text, mix),
-    muted: lerpRGBA(LIGHT.muted, DARK.muted, mix),
-    strong: lerpRGBA(LIGHT.strong, DARK.strong, mix),
-    accent: lerpRGBA(LIGHT.accent, DARK.accent, mix),
-    accentMuted: lerpRGBA(LIGHT.accentMuted, DARK.accentMuted, mix),
-    border: lerpRGBA(LIGHT.border, DARK.border, mix),
-    borderStrong: lerpRGBA(LIGHT.borderStrong, DARK.borderStrong, mix),
-  };
-}
-
-/** The semantic tokens for a given night-progress, as inline CSS custom props. */
-function paletteVars(t: number): CSSProperties {
-  const p = paletteAt(t);
-  return {
-    "--bg": css(p.bg),
-    "--bg-elevated": css(p.elevated),
-    "--text": css(p.text),
-    "--text-muted": css(p.muted),
-    "--text-strong": css(p.strong),
-    "--accent": css(p.accent),
-    "--accent-muted": css(p.accentMuted),
-    "--border-subtle": css(p.border),
-    "--border-strong": css(p.borderStrong),
-  } as CSSProperties;
-}
-
-const DAY_VARS = paletteVars(0); // first paint is daylight — no dark flash
-
-let themeMeta: HTMLMetaElement | null = null;
-/** Write a course's palette onto the root, and sync the page chrome to it. */
-function applyPalette(root: HTMLElement, t: number) {
-  const p = paletteAt(t);
-  const vars = paletteVars(t) as Record<string, string>;
-  for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
-  const ground = css(p.bg);
-  document.body.style.backgroundColor = ground;
-  if (!themeMeta) themeMeta = document.querySelector('meta[name="theme-color"]');
-  themeMeta?.setAttribute("content", ground);
-}
-
-/** Pull an element toward the cursor (mouse only) — the site's magnetic feel. */
-function magnetize(e: ReactPointerEvent<HTMLElement>) {
-  if (e.pointerType !== "mouse") return;
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  el.style.transform = `translate(${(e.clientX - (r.left + r.width / 2)) * 0.18}px, ${
-    (e.clientY - (r.top + r.height / 2)) * 0.18
-  }px)`;
-}
-function demagnetize(e: ReactPointerEvent<HTMLElement>) {
-  e.currentTarget.style.transform = "";
-}
+const storageKey = (table: string | null) => `cart.${table ?? "na"}`;
 
 export default function MenuApp({ categories, table }: Props) {
   const allItems = useMemo(
@@ -217,8 +51,6 @@ export default function MenuApp({ categories, table }: Props) {
   );
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const appliedNight = useRef(0);
   const [query, setQuery] = useState("");
   const [veg, setVeg] = useState<Set<VegType>>(new Set());
   const [cart, setCart] = useState<Cart>({});
@@ -334,65 +166,8 @@ export default function MenuApp({ categories, table }: Props) {
       .filter((c) => c.items.length > 0);
   }, [categories, veg, q, availableIds]);
 
-  // Day → night: one continuous ramp mapped straight to scroll progress, so the
-  // ground glides at a constant rate with no holds or jumps. Paper holds through
-  // the masthead, then it darkens across the courses and settles on void near
-  // the end. An rAF ease-follow removes any residual step; Lenis gives the page
-  // the same smooth scroll as the marketing site.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const frame = () => {
-      const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const y = window.scrollY;
-      const start = window.innerHeight * 0.55; // stay in daylight through the cover
-      const end = scrollMax - window.innerHeight * 0.5; // full night just before the end
-      const progress =
-        end > start
-          ? Math.max(0, Math.min(1, (y - start) / (end - start)))
-          : scrollMax > 0
-            ? y / scrollMax
-            : 0;
-      const cur = appliedNight.current;
-      const nextN = reduce ? progress : cur + (progress - cur) * 0.1;
-      if (reduce || Math.abs(nextN - cur) > 0.0002) {
-        appliedNight.current = nextN;
-        applyPalette(root, nextN);
-      }
-      const bar = progressRef.current;
-      if (bar) bar.style.transform = `scaleX(${scrollMax > 0 ? Math.min(1, y / scrollMax) : 0})`;
-    };
-
-    // Reduced motion: no smooth scroll, no ease — map the palette to position.
-    if (reduce) {
-      const onScroll = () => frame();
-      frame();
-      window.addEventListener("scroll", onScroll, { passive: true });
-      window.addEventListener("resize", onScroll);
-      return () => {
-        window.removeEventListener("scroll", onScroll);
-        window.removeEventListener("resize", onScroll);
-      };
-    }
-
-    // Match the marketing site's scroll feel, and drive the ramp from its rAF.
-    const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1, smoothWheel: true });
-    let raf = 0;
-    const loop = (time: number) => {
-      lenis.raf(time);
-      frame();
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(raf);
-      lenis.destroy();
-    };
-  }, []);
-
-  // Reveal courses and dishes as they rise into view.
+  // Lightweight fade-in as sections rise into view — purely decorative, not
+  // tied to scroll position or any color state.
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -462,17 +237,15 @@ export default function MenuApp({ categories, table }: Props) {
   const noResults = visibleCategories.length === 0;
 
   return (
-    <div className="menu" data-sheet={sheetOpen ? "open" : "closed"} ref={rootRef} style={DAY_VARS}>
-      <div className="menu__progress" ref={progressRef} aria-hidden="true" />
-      <header className="carte" data-reveal>
-        <p className="carte__eyebrow">Berlin · Haus de Gourmet</p>
-        <h1 className="carte__title">The Menu</h1>
-        <p className="carte__sub">à la carte · from daylight into the dark</p>
-        <div className="carte__rule" aria-hidden="true">
-          <span className="carte__mark">✦</span>
+    <div className="menu" data-sheet={sheetOpen ? "open" : "closed"} ref={rootRef}>
+      <header className="menu__header" data-reveal>
+        <p className="menu__eyebrow">{brand.name}</p>
+        <h1 className="menu__title">Menu</h1>
+        {brand.tagline && <p className="menu__tagline">{brand.tagline}</p>}
+        <div className="menu__meta">
+          <span className="menu__hours">{brand.contact.hours}</span>
+          {table && <span className="menu__table">Table {table}</span>}
         </div>
-        <p className="carte__meta">{brand.contact.hours}</p>
-        {table && <p className="carte__table">Table {table}</p>}
       </header>
 
       <div className="menu__controls">
@@ -515,14 +288,11 @@ export default function MenuApp({ categories, table }: Props) {
         <p className="menu__empty">No dishes match that. Try clearing the filters.</p>
       ) : (
         <div className="menu__sections">
-          {visibleCategories.map((c, idx) => (
+          {visibleCategories.map((c) => (
             <section key={c.id} id={`cat-${c.id}`} className="course">
-              <header className="course__head" data-reveal>
-                <div className="course__center">
-                  <span className="course__index" aria-hidden="true">{roman(idx + 1)}</span>
-                  <h2 className="course__name">{c.name}</h2>
-                </div>
-              </header>
+              <h2 className="course__name" data-reveal>
+                {c.name}
+              </h2>
               <ul className="course__list">
                 {c.items.map((item) => (
                   <MenuRow
@@ -545,8 +315,6 @@ export default function MenuApp({ categories, table }: Props) {
           type="button"
           className="cartbar"
           onClick={() => setSheetOpen(true)}
-          onPointerMove={magnetize}
-          onPointerLeave={demagnetize}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
         >
@@ -601,11 +369,10 @@ function MenuRow({
             {item.name}
             {item.is_signature && (
               <span className="dish__sig" aria-hidden="true">
-                ✦
+                ★
               </span>
             )}
           </span>
-          <span className="dish__leader" aria-hidden="true" />
           <span className="dish__price">{formatINR(item.price)}</span>
         </div>
         {item.description && <p className="dish__desc">{item.description}</p>}
@@ -695,7 +462,7 @@ function CartSheet({
           </button>
         </div>
 
-        <ul className="sheet__list" data-lenis-prevent>
+        <ul className="sheet__list">
           {lines.map(([id, line]) => {
             const item = items[id];
             return (

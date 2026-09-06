@@ -1,179 +1,116 @@
 /* =============================================================================
-   MenuApp — "La Carte, day to night".
+   MenuApp — the customer ordering island.
 
-   The customer menu reads like a printed carte that dims as you scroll: it
-   opens on warm paper in daylight and sinks, course by course, toward the
-   site's candlelit void-and-champagne. The palette is driven from the island
-   (MenuApp.tsx) by writing the semantic color tokens onto the `.menu` root;
-   everything here consumes those tokens and glides between them.
-
-   Legibility rule the ramp guarantees: light grounds always carry dark ink,
-   dark grounds always carry ivory — so no resting course sits in a muddy mid.
+   A warm, appetizing browsing menu: dish rows read as soft cards on the
+   app's warm-paper surface, with a sticky search/filter bar and a bottom
+   sheet for reviewing the cart before placing an order. Consumes design
+   tokens only.
    ========================================================================== */
 
-/* --- Root ----------------------------------------------------------------- */
+/* --- Root ------------------------------------------------------------------ */
 .menu {
   --sheet-lift: env(safe-area-inset-bottom, 0px);
   position: relative;
-  max-width: var(--container-editorial);
+  max-width: var(--container-md);
   margin-inline: auto;
   padding-inline: var(--gutter);
   /* room for the sticky cart bar */
-  padding-block-end: calc(var(--space-120) + var(--sheet-lift));
-  color: var(--text);
+  padding-block-end: calc(var(--space-96) + var(--sheet-lift));
+  color: var(--ink);
 }
 
-/* The day→night ground. Fixed so it fills the viewport at every scroll depth.
-   Its colour is rewritten every animation frame by the island (continuous,
-   scroll-linked), so it must NOT carry a CSS transition — that would lag the
-   frame loop and reintroduce the jump. */
-.menu::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--bg);
-}
-
-/* Thin champagne scroll-progress bar — matches the marketing site. */
-.menu__progress {
-  position: fixed;
-  inset-block-start: 0;
-  inset-inline: 0;
-  height: 2px;
-  z-index: 50;
-  background: var(--accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  pointer-events: none;
-  will-change: transform;
-}
-
-/* Reveal-on-scroll (armed by the island's IntersectionObserver). */
+/* Reveal-on-scroll (armed by the island's IntersectionObserver). Purely
+   decorative — never tied to scroll position or color. */
 .menu [data-reveal] {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+  transform: translateY(10px);
+  transition: opacity var(--dur-reveal) var(--ease-out), transform var(--dur-reveal) var(--ease-out);
 }
 .menu [data-reveal].is-revealed {
   opacity: 1;
   transform: none;
 }
 
-/* --- Masthead (the cover of the carte) ------------------------------------ */
-.carte {
-  max-width: 44rem;
-  margin-inline: auto;
-  padding-block: clamp(var(--space-64), 13vw, var(--space-120)) var(--space-40);
+/* --- Header ----------------------------------------------------------------- */
+.menu__header {
+  padding-block: clamp(var(--space-40), 8vw, var(--space-64)) var(--space-32);
   text-align: center;
 }
-/* Global base sets `p { max-width: var(--measure) }`, which pins these lines to
-   a left-aligned box so their centred text drifts left of the title. Undo it
-   here so the whole cover shares one centre axis. */
-.carte p {
-  max-width: none;
-}
-.carte__eyebrow {
+.menu__eyebrow {
   font-size: var(--fs-caption);
+  font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--accent);
 }
-.carte__title {
-  margin-block-start: var(--space-12);
+.menu__title {
+  margin-block-start: var(--space-8);
   font-family: var(--font-display);
-  font-size: var(--fs-display-m);
-  line-height: 0.95;
-  letter-spacing: var(--tracking-display);
-  color: var(--text-strong);
+  font-size: var(--fs-display-l);
+  color: var(--ink);
 }
-.carte__sub {
-  margin: var(--space-16) auto 0;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--fs-body-l);
-  color: var(--text-muted);
+.menu__tagline {
+  margin: var(--space-8) auto 0;
+  max-width: var(--measure);
+  color: var(--ink-muted);
 }
-/* A small centred fleuron flanked by hairlines. */
-.carte__rule {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.menu__meta {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-16);
-  max-width: 15rem;
-  margin: var(--space-32) auto 0;
+  justify-content: center;
+  gap: var(--space-12);
+  margin-block-start: var(--space-16);
+}
+.menu__hours {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+.menu__table {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
   color: var(--accent);
-}
-.carte__rule::before,
-.carte__rule::after {
-  content: "";
-  height: 1px;
-  background: var(--border-strong);
-}
-.carte__mark {
-  font-size: 0.8rem;
-  letter-spacing: 0.3em;
-  /* nudge the glyph's optical centre */
-  transform: translateY(-0.05em);
-}
-.carte__meta {
-  margin-block-start: var(--space-24);
-  font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.carte__table {
-  display: inline-block;
-  margin-block-start: var(--space-24);
-  padding: var(--space-8) var(--space-16);
-  font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--text-strong);
-  border: 1px solid var(--border-strong);
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
 }
 
-/* --- Controls (sticky stationery) ----------------------------------------- */
+/* --- Controls (sticky search / filters) ------------------------------------- */
 .menu__controls {
   position: sticky;
   inset-block-start: 0;
-  z-index: 10;
+  z-index: var(--z-header);
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
-  padding-block: var(--space-16);
-  /* translucent wash of the current ground so rows read as they pass under */
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  gap: var(--space-12);
+  padding-block: var(--space-12);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  border-block-end: 1px solid var(--border-subtle);
+  border-block-end: 1px solid var(--border);
 }
 
 .menu__search {
   display: flex;
-  justify-content: center;
 }
 .menu__search input {
-  width: min(100%, 22rem);
-  height: 2.75rem;
-  padding-block: var(--space-8);
+  width: 100%;
+  height: var(--field-height);
+  padding-inline: var(--space-16);
   font-family: var(--font-ui);
   /* ≥16px so iOS doesn't zoom-and-reflow on focus (--fs-body is 15px). */
   font-size: max(1rem, var(--fs-body));
-  color: var(--text-strong);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
-  text-align: center;
-  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
 }
 .menu__search input::placeholder {
-  color: var(--text-muted);
-  letter-spacing: 0.03em;
-  text-transform: none;
-  font-size: var(--fs-body);
+  color: var(--ink-muted);
 }
 .menu__search input:focus-visible {
   border-color: var(--accent);
@@ -192,24 +129,24 @@
   gap: var(--space-8);
   padding: var(--space-8) var(--space-16);
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-meta);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  transition: color 0.25s var(--ease-out), border-color 0.25s var(--ease-out),
-    background-color 0.25s var(--ease-out);
+  font-weight: 500;
+  color: var(--ink-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 .chip[aria-pressed="true"] {
-  color: var(--text-strong);
+  color: var(--on-accent);
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent);
 }
 
 .menu__jump {
   display: flex;
   justify-content: safe center;
-  gap: var(--space-24);
+  gap: var(--space-8);
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -219,105 +156,70 @@
 }
 .jump {
   flex: 0 0 auto;
-  padding-block: var(--space-4);
+  padding: var(--space-8) var(--space-16);
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-meta);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid transparent;
-  transition: color 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+  font-weight: 500;
+  color: var(--ink-muted);
+  border-radius: var(--radius-pill);
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 .jump:hover,
 .jump:focus-visible {
-  color: var(--text-strong);
-  border-color: var(--accent);
+  color: var(--ink);
+  background: var(--surface-sunken);
 }
 
-/* --- Courses -------------------------------------------------------------- */
+/* --- Courses ----------------------------------------------------------------- */
 .menu__empty {
-  margin-block: var(--space-96);
+  margin-block: var(--space-64);
   max-width: none;
   text-align: center;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--fs-body-l);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .menu__sections {
   display: flex;
   flex-direction: column;
-  gap: clamp(var(--space-64), 12vw, var(--space-120));
-  padding-block-start: clamp(var(--space-48), 9vw, var(--space-96));
+  gap: var(--space-48);
+  padding-block-start: var(--space-32);
 }
 .course {
-  scroll-margin-block-start: 9rem;
-}
-.course__head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--space-24);
-  margin-block-end: var(--space-40);
-}
-.course__head::before,
-.course__head::after {
-  content: "";
-  height: 1px;
-  background: var(--border-subtle);
-}
-.course__center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-12);
-  text-align: center;
-}
-.course__index {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--fs-heading-m);
-  line-height: 1;
-  color: var(--accent);
+  scroll-margin-block-start: 8rem;
 }
 .course__name {
+  margin-block-end: var(--space-16);
   font-family: var(--font-display);
-  font-size: var(--fs-display-s);
-  line-height: 1;
-  letter-spacing: var(--tracking-display);
-  color: var(--text-strong);
-  white-space: nowrap;
+  font-size: var(--fs-heading-l);
+  color: var(--ink);
 }
 
 .course__list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-12);
 }
 
-/* --- Dish (a printed menu line) ------------------------------------------- */
+/* --- Dish (a soft card) -------------------------------------------------- */
 .dish {
   display: grid;
   grid-template-columns: 1fr auto;
-  column-gap: var(--space-24);
+  gap: var(--space-16);
   align-items: center;
-  padding-inline: var(--space-12);
-  padding-block: var(--space-24);
-  border-block-end: 1px solid var(--border-subtle);
-  transition: background-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  padding: var(--space-16);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
 }
 @media (hover: hover) {
   .dish:hover {
-    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    box-shadow: var(--shadow-md);
   }
 }
-/* Signature dishes carry a faint candlelight wash and a gold edge. */
+/* Signature dishes carry a soft accent wash and an accent edge. */
 .dish--sig {
-  background: color-mix(in srgb, var(--accent) 4%, transparent);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-@media (hover: hover) {
-  .dish--sig:hover {
-    background: color-mix(in srgb, var(--accent) 9%, transparent);
-  }
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .dish__body {
   min-width: 0;
@@ -325,6 +227,7 @@
 .dish__line {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-12);
 }
 .dish__title {
@@ -333,35 +236,26 @@
   gap: var(--space-8);
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .dish__sig {
   font-size: 0.7rem;
   color: var(--accent);
-  transform: translateY(-0.15em);
-}
-/* the dotted leader that ties name → price, the carte's signature move */
-.dish__leader {
-  flex: 1 1 auto;
-  align-self: center;
-  min-width: 1.5rem;
-  border-block-end: 1px dotted var(--border-strong);
 }
 .dish__price {
+  flex: 0 0 auto;
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .dish__desc {
-  margin-block-start: var(--space-8);
+  margin-block-start: var(--space-4);
   max-width: var(--measure);
-  font-family: var(--font-display);
-  font-style: italic;
   font-size: var(--fs-body);
-  line-height: 1.4;
-  color: var(--text-muted);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
 }
 /* Signature + tags on one line, tied together with hairline mid-dots so they
    can never run together (e.g. "VEGAN · SPICY", never "VEGANSPICY"). */
@@ -370,15 +264,16 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-8);
-  margin-block-start: var(--space-12);
+  margin-block-start: var(--space-8);
 }
 .dish__meta > * + *::before {
   content: "·";
   margin-inline-end: var(--space-8);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .dish__signword {
   font-size: var(--fs-label);
+  font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--accent);
@@ -387,31 +282,31 @@
   font-size: var(--fs-label);
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .dish__add {
   align-self: center;
 }
 
-/* Add button — a hairline that fills with candlelight on touch. */
+/* Add button */
 .add {
-  min-width: 4.25rem;
-  min-height: 2.75rem;
+  min-width: 4.5rem;
+  min-height: 2.5rem;
   padding-inline: var(--space-16);
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--accent);
-  border: 1px solid var(--accent-muted);
-  transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out),
-    border-color 0.25s var(--ease-out), transform 0.15s var(--ease-out);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 .add:hover,
 .add:focus-visible {
   background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+  color: var(--on-accent);
 }
 .add:active {
   transform: scale(0.95);
@@ -421,26 +316,29 @@
 .stepper {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--accent-muted);
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
 }
 .stepper__btn {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   font-size: var(--fs-body-l);
   line-height: 1;
   color: var(--accent);
-  transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 .stepper__btn:hover {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
 }
 .stepper__qty {
-  min-width: 2rem;
+  min-width: 1.75rem;
   text-align: center;
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-strong);
+  color: var(--ink);
 }
 
 /* --- Veg marker (Indian convention — meaning is fixed, not themed) -------- */
@@ -448,11 +346,11 @@
   --dot: 0.5rem;
   position: relative;
   display: inline-block;
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 0.9rem;
+  height: 0.9rem;
   flex: 0 0 auto;
   border: 1.5px solid currentColor;
-  transition: none;
+  border-radius: 2px;
 }
 .vegdot::after {
   content: "";
@@ -463,38 +361,35 @@
   height: var(--dot);
   border-radius: 50%;
   background: currentColor;
-  transition: none;
 }
 .vegdot--veg {
-  color: #4c8b4a;
+  color: #2e7d32;
 }
 .vegdot--non_veg {
-  color: #a33227;
+  color: #a3312a;
 }
 .vegdot--egg {
-  color: #b08a3c;
+  color: #b3781c;
 }
 
-/* --- Sticky cart bar ------------------------------------------------------ */
-/* text = the current ground, so it always sits with high contrast on the
-   accent (dark ink on daylight gold, ivory on candlelit champagne). */
+/* --- Sticky cart bar -------------------------------------------------------- */
 .cartbar {
   position: fixed;
   inset-inline: var(--gutter);
   inset-block-end: calc(var(--space-16) + env(safe-area-inset-bottom, 0px));
-  z-index: 40;
-  max-width: calc(var(--container-editorial) - 2 * var(--gutter));
+  z-index: var(--z-cartbar);
+  max-width: calc(var(--container-md) - 2 * var(--gutter));
   margin-inline: auto;
   display: flex;
   align-items: center;
   gap: var(--space-16);
   height: var(--btn-height);
-  padding-inline: var(--space-16);
-  color: var(--bg);
+  padding-inline: var(--space-24);
+  color: var(--on-accent);
   background: var(--accent);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.45);
-  animation: cartbar-in 0.4s var(--ease-out);
-  transition: transform 0.5s var(--ease-out);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  animation: cartbar-in var(--dur-reveal) var(--ease-out);
 }
 @keyframes cartbar-in {
   from {
@@ -508,13 +403,13 @@
   min-width: 1.75rem;
   height: 1.75rem;
   padding-inline: var(--space-4);
-  font-family: var(--font-display);
   font-size: var(--fs-caption);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--accent);
-  background: var(--bg);
+  background: var(--on-accent);
   border-radius: 50%;
-  animation: count-bump 0.4s var(--ease-out);
+  animation: count-bump var(--dur-reveal) var(--ease-out);
 }
 @keyframes count-bump {
   0% {
@@ -531,13 +426,10 @@
   flex: 1 1 auto;
   text-align: start;
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
   font-weight: 600;
 }
 .cartbar__total {
-  font-family: var(--font-display);
-  font-size: var(--fs-body-l);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -545,7 +437,7 @@
 .sheet {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-overlay);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -553,10 +445,8 @@
 .sheet__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(9, 9, 8, 0.6);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
-  animation: fade-in 0.3s var(--ease-out);
+  background: rgba(20, 16, 12, 0.45);
+  animation: fade-in var(--dur-fast) var(--ease-out);
 }
 @keyframes fade-in {
   from {
@@ -566,16 +456,17 @@
 .sheet__panel {
   position: relative;
   width: 100%;
-  max-width: var(--container-editorial);
+  max-width: var(--container-md);
   margin-inline: auto;
   max-height: 88svh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
   padding: var(--space-12) var(--gutter)
     calc(var(--space-24) + env(safe-area-inset-bottom, 0px));
-  animation: sheet-up 0.4s var(--ease-out);
+  animation: sheet-up var(--dur-reveal) var(--ease-out);
 }
 @keyframes sheet-up {
   from {
@@ -584,31 +475,31 @@
 }
 .sheet__grabber {
   width: 2.5rem;
-  height: 3px;
+  height: 4px;
   margin: var(--space-4) auto var(--space-16);
   background: var(--border-strong);
+  border-radius: var(--radius-pill);
 }
 .sheet__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   padding-block-end: var(--space-16);
-  border-block-end: 1px solid var(--border-subtle);
+  border-block-end: 1px solid var(--border);
 }
 .sheet__title {
   font-family: var(--font-display);
   font-size: var(--fs-heading-m);
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .sheet__close {
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  transition: color 0.25s var(--ease-out);
+  font-weight: 600;
+  color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 .sheet__close:hover {
-  color: var(--text);
+  color: var(--ink);
 }
 
 .sheet__list {
@@ -621,7 +512,10 @@
 }
 .line {
   padding-block-end: var(--space-16);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.line:last-child {
+  border-bottom: none;
 }
 .line__top {
   display: flex;
@@ -633,12 +527,12 @@
   min-width: 0;
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text-strong);
+  color: var(--ink);
 }
 .line__price {
-  font-family: var(--font-display);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text);
+  color: var(--ink);
 }
 .line__controls {
   display: flex;
@@ -649,18 +543,18 @@
 .line__note {
   flex: 1 1 auto;
   min-width: 0;
-  height: 2.75rem;
+  height: var(--field-height);
   padding-inline: var(--space-12);
   font-family: var(--font-ui);
   /* ≥16px so iOS doesn't zoom-and-reflow on focus (--fs-body is 15px). */
   font-size: max(1rem, var(--fs-body));
-  color: var(--text-strong);
-  background: var(--bg);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0;
+  color: var(--ink);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 .line__note::placeholder {
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .line__note:focus-visible {
   border-color: var(--accent);
@@ -669,14 +563,15 @@
 
 .sheet__foot {
   padding-block-start: var(--space-16);
+  border-block-start: 1px solid var(--border);
 }
 .sheet__total {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  color: var(--text-strong);
+  font-weight: 600;
+  color: var(--ink);
 }
 .sheet__total span:last-child {
   font-variant-numeric: tabular-nums;
@@ -684,36 +579,38 @@
 .sheet__fineprint {
   margin-block-start: var(--space-8);
   font-size: var(--fs-caption);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 .sheet__error {
   margin-block-start: var(--space-12);
   padding: var(--space-12);
   font-size: var(--fs-caption);
-  color: var(--color-white);
-  background: color-mix(in srgb, var(--color-berlin-red) 40%, transparent);
-  border: 1px solid var(--color-berlin-red);
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius-md);
 }
 .place {
   width: 100%;
   min-height: var(--btn-height);
   margin-block-start: var(--space-16);
-  font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-nav);
-  text-transform: uppercase;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--bg);
+  color: var(--on-accent);
   background: var(--accent);
-  transition: opacity 0.3s var(--ease-out);
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.place:hover:not(:disabled) {
+  background: var(--accent-hover);
 }
 .place:disabled {
   opacity: 0.6;
   cursor: progress;
 }
 
-/* --- Wider than a phone: let the carte breathe ---------------------------- */
+/* --- Wider than a phone: let the layout breathe --------------------------- */
 @media (min-width: 48rem) {
   .dish {
-    column-gap: var(--space-40);
+    padding: var(--space-24);
   }
 }
