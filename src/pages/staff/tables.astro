@@ -142,6 +142,9 @@ const prefill = labels.join(", ");
               <div class="qrcard__code" set:html={c.svg} />
               <p class="qrcard__table"><span class="qrcard__word">Table</span>{c.label}</p>
               <p class="qrcard__scan">Scan to view the menu &amp; order</p>
+              {/* Screen-only: lets staff confirm the code points at the live
+                  site before committing to a print run. Hidden on paper. */}
+              <p class="qrcard__url no-print">{c.url}</p>
             </article>
           ))}
         </div>
