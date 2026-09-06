@@ -17,10 +17,15 @@ export type OrderStatus =
   | "served"
   | "cancelled";
 
-/** Order-status transitions the UI/API are allowed to make. */
+/** Order-status transitions the UI/API are allowed to make.
+ *
+ * `preparing` is retired: the kitchen advances confirmed → ready in one tap. It
+ * stays in the enum (Postgres can't drop a value without recreating the type)
+ * and keeps its outgoing transitions so a ticket already in that status when
+ * this shipped can still be completed. Nothing moves INTO it any more. */
 export const ORDER_FLOW: Record<OrderStatus, OrderStatus[]> = {
   pending: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
+  confirmed: ["ready", "cancelled"],
   preparing: ["ready", "cancelled"],
   ready: ["served"],
   served: [],

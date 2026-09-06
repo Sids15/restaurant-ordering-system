@@ -199,6 +199,14 @@ function when(iso: string): string {
   }
 
   @media print {
+    /* Kitchen tickets go to an 80mm thermal roll, not A4. `auto` height lets
+       the roll run as long as the order needs and cut. Matches the customer
+       bill in staff/tabs/[id].astro so both slips come off the same hardware
+       identically. */
+    @page {
+      size: 80mm auto;
+      margin: 3mm;
+    }
     :global(body) {
       background: #fff !important;
     }

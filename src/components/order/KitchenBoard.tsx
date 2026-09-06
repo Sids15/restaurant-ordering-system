@@ -24,13 +24,17 @@ interface KitchenOrderData {
 
 const POLL_MS = 4000;
 
-/** Board columns, left to right — mirrors ACTIVE_STATUSES order in
- * lib/orders/kitchen.ts. Purely a display grouping over `order.status`;
- * the data and the single-step complete() action are unchanged. */
-const COLUMNS: { key: string; label: string }[] = [
-  { key: "confirmed", label: "New" },
-  { key: "preparing", label: "Preparing" },
-  { key: "ready", label: "Ready" },
+/** Board columns, left to right. Purely a display grouping over `order.status`;
+ * the data and the single-step complete() action are unchanged.
+ *
+ * "Preparing" was retired as a workflow step — the kitchen goes New → Ready in
+ * one tap. The status still exists in the Postgres enum, though, so a ticket
+ * could be sitting in it when this ships. Each column therefore matches a LIST
+ * of statuses and New absorbs `preparing`, so an in-flight ticket can't drop off
+ * the board and become impossible to complete. */
+const COLUMNS: { key: string; label: string; statuses: string[] }[] = [
+  { key: "confirmed", label: "New", statuses: ["confirmed", "preparing"] },
+  { key: "ready", label: "Ready", statuses: ["ready"] },
 ];
 
 export default function KitchenBoard({
@@ -94,7 +98,7 @@ export default function KitchenBoard({
   return (
     <div className="board__cols">
       {COLUMNS.map((col) => {
-        const colOrders = orders.filter((o) => o.status === col.key);
+        const colOrders = orders.filter((o) => col.statuses.includes(o.status));
         return (
           <div key={col.key} className="board__col">
             <div className="board__col-head" data-status={col.key}>

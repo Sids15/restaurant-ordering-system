@@ -16,11 +16,19 @@
 }
 
 /* --- Masthead actions (slotted, so styled globally) -------------------------- */
+/* Baseline, not centre: the role chip (--fs-label) sits beside links at
+   --fs-caption, and centring two different type sizes leaves their baselines
+   visibly off. `.st-pass` aligns to baseline internally, so the row must too. */
 .st-actions {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-16);
+}
+/* The sign-out button is wrapped in a <form> for the POST. Without this the
+   form is the flex item and the button's baseline never reaches the row. */
+.st-actions form {
+  display: contents;
 }
 .st-actions__div {
   flex: 0 0 auto;

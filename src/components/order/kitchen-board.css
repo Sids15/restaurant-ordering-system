@@ -36,9 +36,6 @@
 .board__col-head[data-status="confirmed"] {
   border-bottom-color: var(--status-confirmed);
 }
-.board__col-head[data-status="preparing"] {
-  border-bottom-color: var(--status-preparing);
-}
 .board__col-head[data-status="ready"] {
   border-bottom-color: var(--status-ready);
 }
@@ -65,9 +62,6 @@
 }
 .board__col-head[data-status="confirmed"] .board__col-count {
   background: var(--status-confirmed);
-}
-.board__col-head[data-status="preparing"] .board__col-count {
-  background: var(--status-preparing);
 }
 .board__col-head[data-status="ready"] .board__col-count {
   background: var(--status-ready);
@@ -100,8 +94,10 @@
 .ticket--confirmed {
   border-inline-start-color: var(--status-confirmed);
 }
+/* Retired status: a leftover ticket rides in the New column, so it wears New's
+   colour rather than announcing a stage that no longer exists. */
 .ticket--preparing {
-  border-inline-start-color: var(--status-preparing);
+  border-inline-start-color: var(--status-confirmed);
 }
 .ticket--ready {
   border-inline-start-color: var(--status-ready);
