@@ -22,6 +22,10 @@ if (!order) Astro.response.status = 404;
 const backHref =
   profile!.role === "kitchen" ? "/kitchen" : `/staff?code=${order?.code ?? ""}`;
 
+// Printed at the foot so a cook can tell whether the auto-cutter clipped a line.
+const lineCount = order?.items.length ?? 0;
+const unitCount = order?.items.reduce((n, l) => n + l.qty, 0) ?? 0;
+
 function when(iso: string): string {
   try {
     return new Date(iso).toLocaleString("en-IN", {
@@ -47,32 +51,43 @@ function when(iso: string): string {
           <button id="print-btn" type="button" class="actions__print">Print slip</button>
         </div>
 
-        <article class="slip">
-          <header class="slip__head">
-            <p class="slip__brand">{brand.name}</p>
-            <p class="slip__kind">Order slip</p>
+        <article class="kot">
+          {/* The table routes the food, so it is the one loud thing on the
+              ticket. Knocked out of a solid band: thermal paper has no colour,
+              but it inverts cleanly, and that is the only emphasis that
+              survives steam and a glance from across the pass. */}
+          <header class="kot__table">
+            <span class="kot__table-word">Table</span>
+            <span class="kot__table-num">{order.table_label ?? "—"}</span>
           </header>
 
-          <div class="slip__meta">
-            <div><span>Code</span><strong>{order.code}</strong></div>
-            <div><span>Table</span><strong>{order.table_label ?? "—"}</strong></div>
-            <div><span>Placed</span><strong>{when(order.created_at)}</strong></div>
+          <div class="kot__meta">
+            <span>{order.code}</span>
+            <span>{when(order.created_at)}</span>
           </div>
 
-          <ul class="slip__items">
+          {/* Above the items, not below: a note that changes how the whole
+              order is cooked is worthless discovered after the last line. */}
+          {order.notes && <p class="kot__ordernote">{order.notes}</p>}
+
+          <ul class="kot__items">
             {order.items.map((line) => (
-              <li class="slip__item">
-                <span class="slip__qty">{line.qty}×</span>
-                <span class="slip__name">
-                  {line.name}
-                  {line.notes && <span class="slip__note">note: {line.notes}</span>}
+              <li class="kot__item">
+                <span class="kot__qty">{line.qty}</span>
+                <span class="kot__lines">
+                  <span class="kot__name">{line.name}</span>
+                  {line.notes && <span class="kot__note">{line.notes}</span>}
                 </span>
               </li>
             ))}
           </ul>
 
-          {order.notes && <p class="slip__ordernote">Order note: {order.notes}</p>}
-          <p class="slip__foot">— {brand.name} —</p>
+          {/* A checksum for the cutter: if the roll clipped a line, the counts
+              won't match what's on the paper. */}
+          <p class="kot__foot">
+            {lineCount} {lineCount === 1 ? "line" : "lines"} · {unitCount}{" "}
+            {unitCount === 1 ? "item" : "items"} · end
+          </p>
         </article>
       </>
     )}
@@ -122,79 +137,108 @@ function when(iso: string): string {
     cursor: pointer;
   }
 
-  .slip {
+  /* The ticket. Sized in mm because the target is a 72mm printable strip, not a
+     viewport; on screen it renders at the same proportions so what staff check
+     is what the roll produces. DM Sans throughout — the display serif is the
+     customer's voice and has no business on a line cook's ticket. */
+  .kot {
     background: var(--surface-raised);
     color: var(--ink);
-    padding: var(--space-24);
     font-family: var(--font-ui);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+    overflow: hidden;
   }
-  .slip__head {
-    text-align: center;
-    padding-block-end: var(--space-12);
-    border-bottom: 1px dashed var(--border-strong);
-  }
-  .slip__brand {
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-  }
-  .slip__kind {
-    margin-block-start: var(--space-4);
-    font-family: var(--font-display);
-    font-size: var(--fs-heading-s);
-  }
-  .slip__meta {
+
+  .kot__table {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-8) var(--space-24);
-    padding-block: var(--space-12);
-    border-bottom: 1px dashed var(--border-strong);
-    font-size: var(--fs-caption);
+    align-items: baseline;
+    gap: var(--space-8);
+    padding: var(--space-12) var(--space-16);
+    background: var(--ink);
+    color: var(--surface-raised);
   }
-  .slip__meta span {
-    display: block;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-label);
+  .kot__table-word {
+    font-size: var(--fs-caption);
+    font-weight: 500;
+  }
+  .kot__table-num {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kot__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-16);
+    padding: var(--space-8) var(--space-16);
+    border-bottom: 2px solid var(--ink);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
     color: var(--ink-muted);
   }
-  .slip__meta strong {
-    font-size: var(--fs-body);
-  }
-  .slip__items {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-12);
-    padding-block: var(--space-16);
-  }
-  .slip__item {
-    display: flex;
-    gap: var(--space-12);
-  }
-  .slip__qty {
-    flex: 0 0 auto;
-    font-variant-numeric: tabular-nums;
+
+  .kot__ordernote {
+    padding: var(--space-8) var(--space-16);
+    border-bottom: 1px dashed var(--border-strong);
     font-weight: 600;
   }
-  .slip__name {
+
+  .kot__items {
+    padding-inline: var(--space-16);
+  }
+  /* Dashed, not hairline: a 1px grey rule dithers on thermal paper and can
+     disappear entirely. A dash pattern always prints. */
+  .kot__item {
+    display: flex;
+    gap: var(--space-12);
+    padding-block: var(--space-12);
+    border-bottom: 1px dashed var(--border-strong);
+  }
+  .kot__item:last-child {
+    border-bottom: 0;
+  }
+  /* Fixed column so 2 and 12 stack in line and the eye can run down the
+     quantities without reading the names. No "×" — the column position already
+     says quantity, and the glyph is noise at this size. */
+  .kot__qty {
+    flex: 0 0 2.25rem;
+    text-align: right;
+    font-size: var(--fs-heading-s);
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  .kot__lines {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--space-4);
+    min-width: 0;
   }
-  .slip__note {
-    font-size: var(--fs-caption);
-    color: var(--ink-muted);
+  .kot__name {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    line-height: 1.25;
   }
-  .slip__ordernote {
-    padding-block: var(--space-12);
-    border-top: 1px dashed var(--border-strong);
+  /* Inverted, because a missed modifier means the dish gets remade. This is the
+     one thing on the ticket that must survive a distracted glance. */
+  .kot__note {
+    align-self: flex-start;
+    padding: 2px var(--space-8);
+    background: var(--ink);
+    color: var(--surface-raised);
     font-size: var(--fs-caption);
+    font-weight: 600;
   }
-  .slip__foot {
-    text-align: center;
-    padding-block-start: var(--space-16);
+
+  .kot__foot {
+    padding: var(--space-8) var(--space-16) var(--space-16);
+    border-top: 2px solid var(--ink);
     font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
     color: var(--ink-muted);
   }
 
@@ -217,20 +261,60 @@ function when(iso: string): string {
     .no-print {
       display: none !important;
     }
-    .slip {
+    /* Thermal paper is 1-bit. Every grey becomes a dither pattern that muddies
+       under kitchen heat, so the whole ticket collapses to pure black on white
+       and the inverted blocks must print as solid ink, not be "optimised" away
+       by the browser's background-graphics default. */
+    .kot {
+      border: 0;
+      border-radius: 0;
       background: #fff;
       color: #000;
-      padding: 0;
     }
-    .slip__head,
-    .slip__meta,
-    .slip__ordernote {
+    .kot__table,
+    .kot__note {
+      background: #000 !important;
+      color: #fff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .kot__meta,
+    .kot__foot {
+      color: #000;
+    }
+    .kot__meta,
+    .kot__foot,
+    .kot__item,
+    .kot__ordernote {
       border-color: #000;
     }
-    .slip__meta span,
-    .slip__note,
-    .slip__foot {
-      color: #333;
+    .kot__table,
+    .kot__meta,
+    .kot__ordernote,
+    .kot__items,
+    .kot__foot {
+      padding-inline: 0;
+    }
+    .kot__table {
+      padding: 2mm 3mm;
+    }
+    .kot__table-num {
+      font-size: 13mm;
+    }
+    /* Bigger than screen: read at arm's length, often through steam. */
+    .kot__qty {
+      flex-basis: 9mm;
+      font-size: 6mm;
+    }
+    .kot__name {
+      font-size: 4.6mm;
+    }
+    .kot__note {
+      font-size: 3.6mm;
+    }
+    /* Feed past the tear bar so the cutter doesn't take the last line. */
+    .kot__foot {
+      padding-block-end: 12mm;
     }
   }
 </style>
