@@ -1,62 +1,84 @@
 /* =============================================================================
-   BERLIN — Haus de Gourmet · Design Tokens (System v1.0)
-   The single source of truth. Sections consume these; they never invent
-   their own colors, spacing, or type sizes.
+   Standardized restaurant UI — Design Tokens (white-label, warm light)
+   Single source of truth. Components consume these; they never invent their own
+   colors, spacing, or type. A restaurant re-skins via src/data/brand.ts, which
+   AppLayout injects as --brand-accent and --radius-base (with fallbacks below).
+   Light-only for now; a future [data-theme="dark"] block can redefine the same
+   semantic names without touching components.
    ========================================================================== */
 
 :root {
-  /* --- Color · raw palette (Section 3) -------------------------------------- */
-  --color-void: #090908;
-  --color-charcoal: #11110f;
-  --color-warm-black: #171512;
+  /* --- Brand inputs (AppLayout overrides these from brand.ts) --------------- */
+  --brand-accent: #c2410c;
+  --radius-base: 0.75rem; /* "medium"; sharp=0.25rem, soft=1.25rem */
 
-  --color-ivory: #e9e2d4;
-  --color-muted-ivory: #bdb5a5;
-  --color-paper: #dcd2c0;
-  --color-white: #f5f2ea;
+  /* --- Surfaces (warm cream) ---------------------------------------------- */
+  --surface: #fbf8f3;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f3ede3;
 
-  --color-champagne: #b49a63;
-  --color-champagne-muted: #806e48;
-  --color-berlin-red: #641c18;
+  /* --- Ink ---------------------------------------------------------------- */
+  --ink: #2a2521;
+  --ink-muted: #6b6259;
 
-  /* --- Color · semantic (Mode A — Night is the default) (Section 4) --------- */
-  --bg: var(--color-void);
-  --bg-elevated: var(--color-warm-black);
-  --text: var(--color-ivory);
-  --text-muted: var(--color-muted-ivory);
-  --text-strong: var(--color-white);
-  --accent: var(--color-champagne);
-  --accent-muted: var(--color-champagne-muted);
-  --border-subtle: rgba(233, 226, 212, 0.14);
-  --border-strong: rgba(233, 226, 212, 0.28);
+  /* --- Borders ------------------------------------------------------------ */
+  --border: rgba(42, 37, 33, 0.1);
+  --border-strong: rgba(42, 37, 33, 0.18);
 
-  /* --- Typography (Sections 5–7) ------------------------------------------- */
-  --font-display: "Bodoni Moda Variable", "Bodoni Moda", "Didot", Georgia, serif;
-  --font-ui: "Manrope Variable", "Manrope", system-ui, -apple-system, sans-serif;
+  /* --- Accent (derived from brand) ---------------------------------------- */
+  --accent: var(--brand-accent);
+  --accent-hover: color-mix(in srgb, var(--accent) 85%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --on-accent: #ffffff;
 
-  --tracking-display: -0.02em;
-  --tracking-nav: 0.12em;
-  --tracking-label: 0.16em;
-  --tracking-meta: 0.12em;
+  /* --- Status (order lifecycle) ------------------------------------------- */
+  --status-pending: #c2740c;
+  --status-confirmed: #2563eb;
+  --status-preparing: #7c3aed;
+  --status-ready: #15803d;
+  --status-served: #6b6259;
+  --danger: #b91c1c;
+  --status-pending-soft: color-mix(in srgb, var(--status-pending) 14%, var(--surface));
+  --status-confirmed-soft: color-mix(in srgb, var(--status-confirmed) 14%, var(--surface));
+  --status-preparing-soft: color-mix(in srgb, var(--status-preparing) 14%, var(--surface));
+  --status-ready-soft: color-mix(in srgb, var(--status-ready) 14%, var(--surface));
+  --status-served-soft: color-mix(in srgb, var(--status-served) 14%, var(--surface));
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface));
 
-  /* Desktop type scale (Section 6). Fluid clamps keep elegance on the way down. */
-  --fs-display-xl: clamp(4rem, 9vw, 8rem);      /* 128px */
-  --fs-display-l: clamp(3.25rem, 7vw, 6rem);    /* 96px  */
-  --fs-display-m: clamp(2.75rem, 5.5vw, 4.5rem);/* 72px  */
-  --fs-display-s: clamp(2.25rem, 4.5vw, 3.5rem);/* 56px  */
-  --fs-heading-l: clamp(2rem, 3.5vw, 2.5rem);   /* 40px  */
-  --fs-heading-m: clamp(1.6rem, 2.6vw, 2rem);   /* 32px  */
-  --fs-heading-s: 1.5rem;                        /* 24px  */
-  --fs-body-l: 1.125rem;                          /* 18px  */
-  --fs-body: 0.9375rem;                           /* 15px  */
-  --fs-caption: 0.75rem;                          /* 12px  */
-  --fs-label: 0.625rem;                           /* 10px  */
+  /* --- Typography --------------------------------------------------------- */
+  --font-display: "Fraunces Variable", "Fraunces", Georgia, "Times New Roman", serif;
+  --font-ui: "DM Sans Variable", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  --lh-display: 0.92;
-  --lh-heading: 1.1;
+  --tracking-display: -0.01em;
+  --tracking-label: 0.08em;
+
+  /* Calm fluid scale — no oversized display. */
+  --fs-display-xl: clamp(2.5rem, 5vw, 3.5rem);
+  --fs-display-l: clamp(2rem, 4vw, 2.75rem);
+  --fs-display-m: clamp(1.75rem, 3vw, 2.25rem);
+  --fs-heading-l: clamp(1.5rem, 2.4vw, 1.875rem);
+  --fs-heading-m: 1.375rem;
+  --fs-heading-s: 1.125rem;
+  --fs-body-l: 1.0625rem;
+  --fs-body: 0.9375rem;
+  --fs-caption: 0.8125rem;
+  --fs-label: 0.6875rem;
+
+  --lh-heading: 1.15;
   --lh-body: 1.6;
 
-  /* --- Spacing · 8px base (Section 8) -------------------------------------- */
+  /* --- Radius scale (derived from --radius-base) -------------------------- */
+  --radius-sm: calc(var(--radius-base) * 0.5);
+  --radius-md: var(--radius-base);
+  --radius-lg: calc(var(--radius-base) * 1.5);
+  --radius-pill: 999px;
+
+  /* --- Elevation ---------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(42, 37, 33, 0.06);
+  --shadow-md: 0 4px 16px rgba(42, 37, 33, 0.08);
+  --shadow-lg: 0 12px 32px rgba(42, 37, 33, 0.12);
+
+  /* --- Spacing · 8px base ------------------------------------------------- */
   --space-4: 0.25rem;
   --space-8: 0.5rem;
   --space-12: 0.75rem;
@@ -68,58 +90,26 @@
   --space-64: 4rem;
   --space-80: 5rem;
   --space-96: 6rem;
-  --space-120: 7.5rem;
-  --space-160: 10rem;
-  --space-200: 12.5rem;
-  --space-240: 15rem;
+  --space-section: clamp(3rem, 7vw, 5rem);
 
-  /* Section rhythm — the site must breathe (Section 8) */
-  --space-section: clamp(5.5rem, 12vw, 10rem);      /* 88 → 160px */
-  --space-section-cinematic: clamp(7rem, 15vw, 15rem); /* 112 → 240px */
+  /* --- Containers --------------------------------------------------------- */
+  --container-lg: 75rem;   /* 1200px */
+  --container-md: 48rem;   /* 768px  */
+  --measure: 34rem;
+  --gutter: clamp(1rem, 4vw, 2rem);
 
-  /* --- Containers (Section 9) --------------------------------------------- */
-  --container-xl: 90rem;    /* 1440px */
-  --container-lg: 80rem;    /* 1280px */
-  --container-editorial: 56.25rem; /* 900px */
-  --measure: 32.5rem;       /* 520px — max line length for paragraphs */
-  --gutter: clamp(1.5rem, 4vw, 4rem);
+  /* --- Controls ----------------------------------------------------------- */
+  --btn-height: 2.875rem;
+  --btn-padding-inline: 1.5rem;
+  --field-height: 2.75rem;
 
-  /* --- Buttons (Section 12) ----------------------------------------------- */
-  --btn-height: 3.125rem;   /* 50px */
-  --btn-padding-inline: 2rem;
-
-  /* --- Motion (Section 18) ------------------------------------------------ */
+  /* --- Motion ------------------------------------------------------------- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-entry: 1000ms;
-  --dur-reveal: 640ms;
+  --dur-fast: 140ms;
+  --dur-reveal: 360ms;
 
   /* --- Layering ----------------------------------------------------------- */
   --z-header: 100;
+  --z-cartbar: 150;
   --z-overlay: 200;
-}
-
-/* -----------------------------------------------------------------------------
-   Mode B — Editorial (Section 4). A deliberate light reset for The Table / Menu.
-   -------------------------------------------------------------------------- */
-.mode-editorial {
-  --bg: var(--color-paper);
-  --bg-elevated: #d2c7b3;
-  --text: var(--color-warm-black);
-  --text-muted: #5b544a;
-  --text-strong: #0f0e0c;
-  --accent: var(--color-champagne-muted);
-  --accent-muted: #9b8557;
-  --border-subtle: rgba(23, 21, 18, 0.16);
-  --border-strong: rgba(23, 21, 18, 0.3);
-}
-
-/* -----------------------------------------------------------------------------
-   Mode C — After Dark (Section 4). Berlin red enters as reflected club light.
-   -------------------------------------------------------------------------- */
-.mode-after-dark {
-  --bg: var(--color-void);
-  --text: var(--color-ivory);
-  --accent: var(--color-berlin-red);
-  --accent-muted: #7a2620;
 }

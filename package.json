@@ -6,7 +6,7 @@
   "engines": {
     "node": "22.x"
   },
-  "description": "BERLIN — Haus de Gourmet. A real-time QR ordering app for a rooftop gourmet house and bar.",
+  "description": "A real-time QR ordering app — standardized white-label restaurant UI.",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -32,8 +32,8 @@
     "path-to-regexp": "^6.3.0"
   },
   "devDependencies": {
-    "@fontsource-variable/bodoni-moda": "^5.1.0",
-    "@fontsource-variable/manrope": "^5.1.0",
+    "@fontsource-variable/fraunces": "^5.1.0",
+    "@fontsource-variable/dm-sans": "^5.1.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"

@@ -10,7 +10,7 @@ import AppLayout from "../../../layouts/AppLayout.astro";
 import { getTabBill } from "../../../lib/orders/tabs";
 import { formatINR } from "../../../lib/money";
 import { SERVICE_RATE, GST_RATE } from "../../../lib/billing";
-import { contact } from "../../../data/site";
+import { brand } from "../../../data/brand";
 import "../../../styles/staff.css";
 
 export const prerender = false;
@@ -109,7 +109,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
             <header class="receipt__head">
               <p class="receipt__brand">Berlin</p>
               <p class="receipt__subbrand">Haus de Gourmet</p>
-              <p class="receipt__addr">{contact.address.line1} · {contact.address.line2}</p>
+              <p class="receipt__addr">{brand.contact.address.line1} · {brand.contact.address.line2}</p>
               <p class="receipt__doc">Tax Invoice</p>
             </header>
 

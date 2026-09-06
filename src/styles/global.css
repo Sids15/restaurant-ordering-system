@@ -1,5 +1,5 @@
 /* =============================================================================
-   BERLIN — Haus de Gourmet · Global base
+   Standardized restaurant UI · Global base
    Reset + base typography + shared layout primitives. Consumes tokens only.
    ========================================================================== */
 
@@ -26,8 +26,8 @@ html {
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text);
+  background-color: var(--surface);
+  color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
@@ -87,7 +87,7 @@ ol {
 
 ::selection {
   background: var(--accent);
-  color: var(--color-void);
+  color: var(--on-accent);
 }
 
 /* --- Base typography ------------------------------------------------------ */
@@ -98,7 +98,7 @@ h3 {
   font-weight: 400; /* elegance from scale + spacing, never weight (Section 6) */
   letter-spacing: var(--tracking-display);
   line-height: var(--lh-heading);
-  color: var(--text);
+  color: var(--ink);
 }
 
 p {
@@ -127,8 +127,8 @@ main {
 
 .section {
   padding-block: var(--space-section);
-  background-color: var(--bg);
-  color: var(--text);
+  background-color: var(--surface);
+  color: var(--ink);
 }
 
 .section--cinematic {
@@ -142,7 +142,7 @@ main {
   font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .visually-hidden {

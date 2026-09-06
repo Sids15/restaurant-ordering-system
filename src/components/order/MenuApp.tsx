@@ -26,7 +26,7 @@ import {
 import Lenis from "lenis";
 import type { VegType } from "../../lib/types";
 import { formatINR } from "../../lib/money";
-import { contact } from "../../data/site";
+import { brand } from "../../data/brand";
 import "./menu-app.css";
 
 interface MenuItemData {
@@ -471,7 +471,7 @@ export default function MenuApp({ categories, table }: Props) {
         <div className="carte__rule" aria-hidden="true">
           <span className="carte__mark">✦</span>
         </div>
-        <p className="carte__meta">{contact.hours}</p>
+        <p className="carte__meta">{brand.contact.hours}</p>
         {table && <p className="carte__table">Table {table}</p>}
       </header>
 
