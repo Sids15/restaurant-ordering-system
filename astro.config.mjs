@@ -6,10 +6,14 @@ import vercel from '@astrojs/vercel';
 // https://astro.build/config
 export default defineConfig({
   // Server output so the ordering app renders per request as serverless
-  // functions. Marketing pages opt back into static with `export const
-  // prerender = true` (see src/pages/index.astro).
+  // functions.
   output: 'server',
   adapter: vercel(),
+
+  // The app's front door is the customer menu.
+  redirects: {
+    '/': '/menu',
+  },
 
   // CSRF: reject form POSTs whose Origin doesn't match the host. The staff
   // mutation endpoints are cookie-authenticated, so this (with SameSite=Lax

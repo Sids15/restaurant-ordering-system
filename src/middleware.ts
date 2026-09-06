@@ -10,7 +10,7 @@ import { rateLimit, clientIp } from "./lib/http/rate-limit";
  * and the staff/logout APIs) we verify the session and load the profile:
  *   • protected *pages* with no valid staff session → redirect to the login page
  *   • protected *APIs* → left for the endpoint to 401/403 via requireStaff()
- * Marketing and customer routes stay open and skip the auth round-trip.
+ * Customer routes (the menu / ordering flow) stay open and skip the auth round-trip.
  */
 const PROTECTED = ["/staff", "/kitchen", "/admin"];
 const PUBLIC_WITHIN = ["/staff/login"];
@@ -51,10 +51,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // Create the request-scoped client LAZILY — only when a route actually reads
-  // locals.supabase. Middleware runs during prerendering too, and the static
-  // marketing pages never touch Supabase; an eager client would force the build
-  // to have the keys (which aren't present at build on Vercel) and crash the
-  // prerender. Lazy means the keys are needed only at runtime, where they are.
+  // locals.supabase. An eager client would force the build to have the keys
+  // (which aren't present at build on Vercel) and crash any prerender/build-time
+  // pass. Lazy means the keys are needed only at runtime, where they are.
   let supabase: ReturnType<typeof supabaseServer> | null = null;
   Object.defineProperty(context.locals, "supabase", {
     configurable: true,

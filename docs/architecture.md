@@ -1,11 +1,8 @@
 # BERLIN — Architecture
 
-This repo is **two things in one Astro project**:
-
-1. **The marketing site** — the nocturnal single-page experience (static, prerendered).
-2. **The ordering app** — a real-time QR ordering + kitchen system (server-rendered on serverless).
-
-They share the design system (`src/styles/tokens.css`) and deploy together.
+This repo is a **real-time QR ordering + kitchen app** built as an Astro
+project (server-rendered on serverless). The customer menu, staff surfaces, and
+kitchen board all share the design system (`src/styles/tokens.css`).
 
 ---
 
@@ -13,17 +10,17 @@ They share the design system (`src/styles/tokens.css`) and deploy together.
 
 | Concern | Choice | Why |
 | --- | --- | --- |
-| Framework | **Astro** (hybrid) | Marketing stays static; app pages render server-side. One repo. |
+| Framework | **Astro** (`output: "server"`) | App pages render server-side as serverless functions. |
 | Hosting | **Serverless** (Vercel adapter) | No always-on server to run or babysit. |
 | Database | **Supabase (Postgres)** | Managed — nothing to host. |
 | Realtime | **Supabase Realtime** | Kitchen board updates live via table subscriptions — no server-held sockets. |
 | Auth | **Supabase Auth** + `profiles.role` | Per-user staff logins with roles. |
 | QR | `qrcode` (generate) + camera scan (staff) | Order codes → QR; staff scan/enter to pull up an order. |
 
-**Rendering:** `output: "server"`. Marketing pages opt into static with
-`export const prerender = true`; app pages render per request as serverless
-functions. The kitchen board subscribes directly to Supabase Realtime from the
-browser, so no persistent connection lives on our side.
+**Rendering:** `output: "server"`. App pages render per request as serverless
+functions; `/` redirects to the customer menu. The kitchen board subscribes
+directly to Supabase Realtime from the browser, so no persistent connection
+lives on our side.
 
 ---
 
@@ -83,15 +80,15 @@ menu later changes.
 ```
 src/
 ├─ components/
-│  ├─ layout/ · sections/ · ui/   the MARKETING site
-│  └─ order/                      the ordering APP (menu, cart, staff, kitchen)
-├─ layouts/    BaseLayout (marketing) · AppLayout (app)
+│  ├─ order/    customer menu, cart, order builder
+│  └─ staff/    staff / kitchen surfaces
+├─ layouts/    AppLayout (app document shell)
 ├─ lib/
 │  ├─ supabase/  browser + admin clients
 │  ├─ orders/    create / confirm / state-machine
 │  ├─ menu/      queries
 │  └─ types.ts   shared Order / MenuItem types
-├─ pages/        index (static) · menu · order/[code] · staff/* · kitchen/* · api/*
+├─ pages/        menu · order/[code] · staff/* · kitchen/* · admin/* · api/* (/ → /menu)
 ├─ middleware.ts auth guard for /staff and /kitchen
 supabase/
 ├─ migrations/   schema + RLS (versioned SQL)

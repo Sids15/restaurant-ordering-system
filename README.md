@@ -1,34 +1,34 @@
 # BERLIN — Haus de Gourmet
 
-A nocturnal editorial website for a rooftop gourmet house and bar. Built to
-Design System v1.0: dark architectural surfaces, warm ivory typography,
-restrained brass accents, and a day → after-dark journey down the page.
+A **real-time QR ordering + kitchen app** for a rooftop gourmet house and bar.
+Customers scan a table QR to browse the menu and order; staff confirm and track
+orders; the kitchen works a live board. Built to Design System v1.0: dark
+architectural surfaces, warm ivory typography, restrained brass accents.
 
-This repo is **two things in one Astro project**: the **marketing site**
-(static, prerendered) and a **real-time QR ordering app** (server-rendered on
-serverless, Supabase Postgres + Realtime + Auth). See
-[`docs/architecture.md`](docs/architecture.md) for the full design, data model,
-roles, and build sequence.
+Server-rendered on serverless (Vercel), backed by Supabase (Postgres + Realtime
++ Auth). See [`docs/architecture.md`](docs/architecture.md) for the full design,
+data model, roles, and build sequence, and [`docs/setup.md`](docs/setup.md) to
+get running.
 
-> **Setup for the app:** copy `.env.example` to `.env` and fill in your Supabase
-> project keys. `npm run dev` runs both marketing and app locally; the
-> production build targets Vercel serverless (`npm run build`).
+> **Setup:** copy `.env.example` to `.env` and fill in your Supabase project
+> keys, then `npm run dev`. The production build targets Vercel serverless
+> (`npm run build`).
 
 ## Stack
 
-- **Astro** (static output) — near-zero JS; ships only the interactivity that
-  genuinely needs it, as React islands.
-- **React islands** — reserved for the day→night scroll, mobile nav, and menu
-  carousel (added in later features).
-- **Astro `<Picture>`** — AVIF + WebP + JPG fallback with responsive `srcset`
-  and lazy-loading, per the performance rules.
+- **Astro** (`output: "server"`) — server-rendered app pages as serverless
+  functions; near-zero JS elsewhere.
+- **React islands** — the customer menu / cart (`MenuApp`) and other interactive
+  surfaces only.
+- **Supabase** — Postgres + row-level security, Realtime (live kitchen board),
+  and Auth (staff logins with roles).
 - **Self-hosted variable fonts** — Bodoni Moda (display) + Manrope (UI).
 
 ## Commands
 
 ```bash
 npm install       # install dependencies
-npm run dev       # local dev server
+npm run dev       # local dev server (http://localhost:4321)
 npm run build     # production build → dist/
 npm run preview   # serve the production build
 npm run scan      # safety scan of STAGED files (run before every commit)
@@ -38,35 +38,13 @@ npm run scan:all  # safety scan of the whole repo
 ## Design tokens
 
 All colors, type sizes, spacing, and motion live in `src/styles/tokens.css`.
-Sections consume these tokens — they never invent their own values.
+Components consume these tokens — they never invent their own values.
 
-## Where media goes
+## Media
 
-- **Images / photography → `src/assets/<section>/`** — optimized at build
-  (AVIF + WebP + `srcset`). Commit the highest-quality original; the build
-  handles compression. See [`src/assets/README.md`](src/assets/README.md) for
-  the per-section folders and crops.
-- **Videos & static files → `public/videos/…`** — served as-is (Astro doesn't
-  transcode video). Reference by URL, e.g. `/videos/after-dark-loop.mp4`. See
-  [`public/videos/README.md`](public/videos/README.md).
-
-Photography currently uses **free-license placeholders** (Unsplash, no
-attribution required), clearly marked with `@swap` comments so the final
-art-directed media drops in with no code changes.
-
-### Hero footage → scroll-scrubbed frames
-
-The hero scrubs a **WebP frame sequence** on a canvas (smooth on every device;
-no video-seek jank). To (re)generate frames from the source clip:
-
-```bash
-# put the source clip at media-src/hero-pour.mp4, then:
-npm run frames        # → public/videos/hero/frames/frame-0001.webp …
-```
-
-Update `FRAME_COUNT` in `src/components/sections/Hero.astro` if the count
-changes. Tune count/width/quality at the top of `scripts/extract-frames.mjs`.
-The source clip lives in `media-src/` (not shipped); only the frames ship.
+Images live in `src/assets/` and are **optimized at build** (AVIF + WebP + JPG
+fallback with responsive `srcset`). Commit the highest-quality original; the
+build handles compression. See [`src/assets/README.md`](src/assets/README.md).
 
 ## Safety scan
 
@@ -78,13 +56,13 @@ allowlist mechanism (`.safetyscanignore` / inline `safety-scan-ignore`).
 
 ```
 src/
-├── assets/       # optimized-at-build imagery (placeholders for now)
+├── assets/       # optimized-at-build imagery (rooftop staff-login shot)
 ├── components/
-│   ├── layout/   # Header (+ Footer, MobileActionBar later)
-│   ├── ui/       # Button, SectionLabel, … primitives
-│   └── sections/ # Hero (+ Experience, Rooftop, … later)
-├── data/site.ts  # brand, nav, public contact details (no secrets)
-├── layouts/      # document shell
-├── pages/        # index.astro — the single-page journey
-└── styles/       # tokens.css + global.css
+│   ├── order/    # customer menu, cart, order builder
+│   └── staff/    # staff / kitchen surfaces
+├── data/site.ts  # brand + public contact details (no secrets)
+├── layouts/      # AppLayout — the app document shell
+├── lib/          # supabase clients, orders, menu, auth, http helpers
+├── pages/        # menu · order/[code] · staff/* · kitchen/* · admin/* · api/*
+└── styles/       # tokens.css + global.css + surface styles
 ```

@@ -34,11 +34,10 @@ cp .env.example .env
 
 ## 5. Run
 ```bash
-npm run dev      # marketing + app at http://localhost:4321
+npm run dev      # app at http://localhost:4321
 ```
-- Marketing: `/`
-- Customer menu: `/menu` (later `/menu?table=6`)
-- Staff / Kitchen: `/staff`, `/kitchen` (auth arrives in Feature 4)
+- Customer menu: `/menu` (per-table entry: `/menu/[token]`) — `/` redirects here
+- Staff / Kitchen: `/staff`, `/kitchen`
 
 ## Deploy
 Push to a Vercel project; set the three env vars in Vercel → Project Settings →
