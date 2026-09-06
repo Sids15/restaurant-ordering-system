@@ -6,10 +6,13 @@
  * and advance. Initial queue is server-rendered; the island polls for updates.
  */
 import AppLayout from "../../layouts/AppLayout.astro";
+import StationMasthead from "../../components/staff/StationMasthead.astro";
 import KitchenBoard from "../../components/order/KitchenBoard.tsx";
 import AvailabilityPanel from "../../components/order/AvailabilityPanel.tsx";
 import { getActiveKitchenOrders } from "../../lib/orders/kitchen";
 import { getKitchenMenu } from "../../lib/menu/availability";
+import { brand } from "../../data/brand";
+import "../../styles/staff.css";
 
 export const prerender = false;
 
@@ -21,85 +24,24 @@ const canEditAvailability = profile!.role === "kitchen" || profile!.role === "ma
 const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
 ---
 
-<AppLayout title="Kitchen — Berlin">
-  <main class="kitchen">
-    <header class="kitchen__bar">
-      <div>
-        <p class="kitchen__eyebrow">Berlin · Kitchen</p>
-        <h1 class="kitchen__title">Live orders</h1>
-      </div>
-      <div class="kitchen__who">
-        <span class="kitchen__role">Kitchen</span>
+<AppLayout title={`Kitchen — ${brand.name}`}>
+  <main class="st-shell">
+    <StationMasthead title="Kitchen board">
+      <div class="st-actions" slot="actions">
+        <span class="st-pass">
+          {profile!.name && profile!.name.trim().toLowerCase() !== profile!.role && (
+            <span class="st-pass__name">{profile!.name}</span>
+          )}
+          <span class="st-pass__role">{profile!.role}</span>
+        </span>
         <form method="post" action="/api/auth/logout">
-          <button class="kitchen__signout" type="submit">Sign out</button>
+          <button class="st-signout" type="submit">Sign out</button>
         </form>
       </div>
-    </header>
+    </StationMasthead>
 
     <KitchenBoard client:load initialOrders={initialOrders} canComplete={profile!.role === "kitchen"} />
 
     {canEditAvailability && <AvailabilityPanel client:load initialMenu={initialMenu} />}
   </main>
 </AppLayout>
-
-<style>
-  .kitchen {
-    max-width: var(--container-xl);
-    margin-inline: auto;
-    padding: var(--space-32) var(--gutter) var(--space-64);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-24);
-  }
-  .kitchen__bar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-16);
-    padding-block-end: var(--space-24);
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .kitchen__eyebrow {
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .kitchen__title {
-    margin-block-start: var(--space-4);
-    font-family: var(--font-display);
-    font-size: var(--fs-display-s);
-    color: var(--text-strong);
-  }
-  .kitchen__who {
-    display: flex;
-    align-items: center;
-    gap: var(--space-16);
-    font-size: var(--fs-caption);
-  }
-  .kitchen__link {
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .kitchen__link:hover {
-    color: var(--text-strong);
-  }
-  .kitchen__role {
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .kitchen__signout {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font: inherit;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-meta);
-    cursor: pointer;
-  }
-  .kitchen__signout:hover {
-    color: var(--text-strong);
-  }
-</style>

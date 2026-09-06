@@ -1,28 +1,111 @@
 /* =============================================================================
-   KitchenBoard — live order queue. One list, tap Complete. Night mode.
+   KitchenBoard — the live order queue. Orders group into columns by status
+   (Confirmed → Preparing → Ready) so the kitchen can see the whole flow at a
+   glance; each ticket carries its status's --status-* accent. One action per
+   ticket — Complete — sized as a big touch target for a busy line. Consumes
+   design tokens only.
    ========================================================================== */
 
 .board__empty {
   padding-block: var(--space-64);
   text-align: center;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
-.board__grid {
+.board__cols {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: var(--space-16);
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-24);
   align-items: start;
 }
 
-/* --- Ticket --------------------------------------------------------------- */
+/* --- Column ----------------------------------------------------------------- */
+.board__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
+}
+.board__col-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding-block-end: var(--space-12);
+  border-bottom: 2px solid var(--border);
+}
+.board__col-head[data-status="confirmed"] {
+  border-bottom-color: var(--status-confirmed);
+}
+.board__col-head[data-status="preparing"] {
+  border-bottom-color: var(--status-preparing);
+}
+.board__col-head[data-status="ready"] {
+  border-bottom-color: var(--status-ready);
+}
+.board__col-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.board__col-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding-inline: var(--space-4);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-accent);
+  background: var(--ink-muted);
+  border-radius: var(--radius-pill);
+}
+.board__col-head[data-status="confirmed"] .board__col-count {
+  background: var(--status-confirmed);
+}
+.board__col-head[data-status="preparing"] .board__col-count {
+  background: var(--status-preparing);
+}
+.board__col-head[data-status="ready"] .board__col-count {
+  background: var(--status-ready);
+}
+.board__col-empty {
+  padding: var(--space-16);
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.board__col-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+/* --- Ticket ------------------------------------------------------------------ */
 .ticket {
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
   padding: var(--space-16);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--ink-muted);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.ticket--confirmed {
+  border-inline-start-color: var(--status-confirmed);
+}
+.ticket--preparing {
+  border-inline-start-color: var(--status-preparing);
+}
+.ticket--ready {
+  border-inline-start-color: var(--status-ready);
+  background: var(--status-ready-soft);
 }
 .ticket__top {
   display: flex;
@@ -33,12 +116,12 @@
 .ticket__code {
   font-family: var(--font-display);
   font-size: var(--fs-heading-s);
-  letter-spacing: 0.08em;
-  color: var(--text-strong);
+  letter-spacing: 0.06em;
+  color: var(--ink);
 }
 .ticket__meta {
   font-size: var(--fs-caption);
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -51,29 +134,36 @@
   display: flex;
   gap: var(--space-12);
   align-items: baseline;
+  font-size: var(--fs-body-l);
 }
 .ticket__qty {
   flex: 0 0 auto;
+  min-width: 2ch;
   color: var(--accent);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .ticket__name {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--text);
+  color: var(--ink);
+  font-weight: 600;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 .ticket__inote {
   font-size: var(--fs-caption);
-  color: var(--text-muted);
+  font-weight: 400;
+  color: var(--ink-muted);
 }
 .ticket__note {
   font-size: var(--fs-caption);
-  color: var(--text-muted);
-  padding-block-start: var(--space-8);
-  border-top: 1px solid var(--border-subtle);
+  color: var(--ink);
+  padding: var(--space-8) var(--space-12);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--accent);
 }
 .ticket__actions {
   display: flex;
@@ -84,31 +174,35 @@
 .ticket__slip {
   flex: 0 0 auto;
   font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-meta);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-subtle);
-  padding-block-end: 2px;
+  color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 .ticket__slip:hover {
-  color: var(--text-strong);
-  border-color: var(--accent-muted);
+  color: var(--ink);
 }
 .ticket__advance {
   flex: 1 1 auto;
-  min-height: 2.75rem;
+  min-height: calc(var(--btn-height) * 1.25);
   background: var(--accent);
-  color: var(--color-warm-black);
+  color: var(--on-accent);
   border: none;
+  border-radius: var(--radius-md);
   font: inherit;
-  font-size: var(--fs-caption);
-  letter-spacing: var(--tracking-nav);
+  font-weight: 700;
+  font-size: var(--fs-body-l);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   cursor: pointer;
-  transition: opacity 0.2s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
-.ticket__advance:hover {
-  opacity: 0.9;
+.ticket__advance:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.ticket__advance:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .ticket__advance:disabled {
   opacity: 0.5;
@@ -117,7 +211,7 @@
 
 /* --- Phones: single column ----------------------------------------------- */
 @media (max-width: 30rem) {
-  .board__grid {
+  .board__cols {
     grid-template-columns: 1fr;
   }
 }
