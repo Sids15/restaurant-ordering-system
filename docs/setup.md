@@ -28,7 +28,7 @@ In the Supabase dashboard → **SQL Editor**, run in order:
 ## 4. Configure env
 ```bash
 cp .env.example .env
-# fill PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+# fill SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 ```
 `.env` is gitignored — never commit real keys.
 

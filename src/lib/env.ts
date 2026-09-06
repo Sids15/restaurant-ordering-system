@@ -4,7 +4,7 @@
  * Astro/Vite inlines `import.meta.env.X` at BUILD time. Vercel does NOT expose
  * variables marked "Sensitive" to the build step, so those get inlined as
  * `undefined` and stay undefined at runtime — which is why a sensitive
- * PUBLIC_SUPABASE_URL produced "URL and Key are required" 500s.
+ * SUPABASE_URL produced "URL and Key are required" 500s.
  *
  * Vercel DOES inject every variable (sensitive included) into the function's
  * `process.env` at RUNTIME. So we read the build-inlined value first and fall

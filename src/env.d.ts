@@ -1,16 +1,16 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
-  /** Supabase project URL (public). */
-  readonly PUBLIC_SUPABASE_URL: string;
-  /** Supabase anon key (public; data guarded by RLS). */
-  readonly PUBLIC_SUPABASE_ANON_KEY: string;
+  /** Supabase project URL (server only; read via `serverEnv`). */
+  readonly SUPABASE_URL: string;
+  /** Supabase anon key (server only; data guarded by RLS). */
+  readonly SUPABASE_ANON_KEY: string;
   /** Supabase service-role key (SECRET — server only). */
   readonly SUPABASE_SERVICE_ROLE_KEY: string;
   /** HMAC secret that signs table QR tokens (SECRET — server only). */
   readonly TABLE_TOKEN_SECRET: string;
-  /** Canonical customer domain for printed QR codes (public; optional). */
-  readonly PUBLIC_SITE_URL?: string;
+  /** Canonical customer domain for printed QR codes (server only; optional). */
+  readonly SITE_URL?: string;
 }
 
 interface ImportMeta {

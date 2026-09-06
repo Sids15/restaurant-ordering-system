@@ -41,9 +41,9 @@ const labels = [
 // Canonical customer domain, so a printed code is identical no matter where the
 // sheet was generated (production, a preview link, or localhost) — the codes are
 // meant to be printed once and last. Falls back to the request origin when
-// PUBLIC_SITE_URL isn't set.
+// SITE_URL isn't set.
 const baseUrl = (
-  optionalServerEnv(import.meta.env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL") ?? Astro.url.origin
+  optionalServerEnv(import.meta.env.SITE_URL, "SITE_URL") ?? Astro.url.origin
 ).replace(/\/+$/, "");
 
 // The QR encodes a SIGNED token, not the raw label, so a scanned code can't be

@@ -1,7 +1,8 @@
 /**
  * Menu queries. Public menu reads use the anon key (guarded by RLS: anon only
  * sees available items). SERVER-ONLY — `anonClient` falls back to `process.env`,
- * which doesn't exist in the browser. Client code uses `supabase/browser.ts`.
+ * which doesn't exist in the browser. Client islands never reach Supabase
+ * directly; they poll our own `/api` routes instead.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { MenuCategory, MenuItem } from "../types";
@@ -9,8 +10,8 @@ import { serverEnv } from "../env";
 
 function anonClient(): SupabaseClient {
   return createClient(
-    serverEnv(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL"),
-    serverEnv(import.meta.env.PUBLIC_SUPABASE_ANON_KEY, "PUBLIC_SUPABASE_ANON_KEY"),
+    serverEnv(import.meta.env.SUPABASE_URL, "SUPABASE_URL"),
+    serverEnv(import.meta.env.SUPABASE_ANON_KEY, "SUPABASE_ANON_KEY"),
     { auth: { persistSession: false } },
   );
 }

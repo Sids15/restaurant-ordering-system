@@ -16,8 +16,8 @@ export function supabaseServer(ctx: {
   cookies: AstroCookies;
 }): SupabaseClient {
   return createServerClient(
-    serverEnv(import.meta.env.PUBLIC_SUPABASE_URL, "PUBLIC_SUPABASE_URL"),
-    serverEnv(import.meta.env.PUBLIC_SUPABASE_ANON_KEY, "PUBLIC_SUPABASE_ANON_KEY"),
+    serverEnv(import.meta.env.SUPABASE_URL, "SUPABASE_URL"),
+    serverEnv(import.meta.env.SUPABASE_ANON_KEY, "SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {

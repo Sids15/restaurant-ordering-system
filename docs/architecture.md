@@ -104,8 +104,8 @@ Nothing is hardcoded.
 
 | Var | Exposure |
 | --- | --- |
-| `PUBLIC_SUPABASE_URL` | public (in the browser) |
-| `PUBLIC_SUPABASE_ANON_KEY` | public by design; data guarded by RLS |
+| `SUPABASE_URL` | server only; publishable, but never sent to the browser |
+| `SUPABASE_ANON_KEY` | server only; publishable by design, data guarded by RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | **secret — server only, never in the client** |
 
 `scripts/safety-scan.mjs` blocks commits containing Supabase keys, JWTs, or
