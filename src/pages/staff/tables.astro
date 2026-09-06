@@ -42,8 +42,16 @@ const labels = [
 // sheet was generated (production, a preview link, or localhost) — the codes are
 // meant to be printed once and last. Falls back to the request origin when
 // SITE_URL isn't set.
+// A hand-entered SITE_URL often arrives without a scheme ("example.com"). A QR
+// holding a scheme-less string is not a link: phone cameras offer to copy it
+// rather than open it, and you only find out after the sheet is printed. Assume
+// https rather than mint a whole batch of unopenable codes. (Astro.url.origin
+// always carries a scheme, so this only ever corrects a configured value.)
+const configuredBase = optionalServerEnv(import.meta.env.SITE_URL, "SITE_URL");
 const baseUrl = (
-  optionalServerEnv(import.meta.env.SITE_URL, "SITE_URL") ?? Astro.url.origin
+  configuredBase
+    ? (/^https?:\/\//i.test(configuredBase) ? configuredBase : `https://${configuredBase}`)
+    : Astro.url.origin
 ).replace(/\/+$/, "");
 
 // The QR encodes a SIGNED token, not the raw label, so a scanned code can't be
