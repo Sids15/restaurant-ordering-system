@@ -13,10 +13,13 @@ interface Props {
   table: string | null;
   /** If set, this device is bound to a different table — show a notice, not the menu. */
   elsewhere?: string | null;
+  /** The scanned code didn't verify — tell the guest instead of silently seating them nowhere. */
+  invalid?: boolean;
 }
-const { table, elsewhere = null } = Astro.props;
+const { table, elsewhere = null, invalid = false } = Astro.props;
 
-const result = elsewhere ? { ok: true as const, categories: [] } : await getCustomerMenu();
+const skipMenu = Boolean(elsewhere) || invalid;
+const result = skipMenu ? { ok: true as const, categories: [] } : await getCustomerMenu();
 
 // Three distinct outcomes: couldn't reach the menu, reached-but-empty, or a
 // real menu to render. Never let the first masquerade as the second.
@@ -53,6 +56,16 @@ const isEmpty = result.ok && categories.length === 0;
       <a class="menu-empty__retry" href={`/menu/${encodeURIComponent(elsewhere)}`}>
         Go to Table {elsewhere}
       </a>
+    </main>
+  ) : invalid ? (
+    <main class="menu-empty">
+      <p class="menu-empty__eyebrow">{brand.name}</p>
+      <h1 class="menu-empty__title">This code isn't valid</h1>
+      <p class="menu-empty__note">
+        Please ask a server for an up-to-date code for your table. You can still
+        look at the menu — you just won't be able to order from this link.
+      </p>
+      <a class="menu-empty__retry" href="/menu">Browse the menu</a>
     </main>
   ) : failed ? (
     <main class="menu-empty">

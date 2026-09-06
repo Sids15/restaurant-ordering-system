@@ -46,7 +46,8 @@ function setTabCookie(cookies: AstroCookies, token: string): void {
 
 export type MenuAccess =
   | { mode: "ok"; table: string | null }
-  | { mode: "elsewhere"; table: string };
+  | { mode: "elsewhere"; table: string }
+  | { mode: "invalid" };
 
 /**
  * Decide what a guest sees at /menu or /menu/<token>. The URL segment is a
@@ -57,7 +58,10 @@ export type MenuAccess =
  *    table) → serve it
  *  • bound to a different table → "you're seated at Table X" (no ordering here)
  *  • not bound + a VALID token → open/join that table's tab, set the cookie
- *  • not bound + no/invalid token → browse only (no tab created)
+ *  • not bound + NO token → browse only (no tab created)
+ *  • not bound + a token that doesn't verify → "invalid", so a stale printed
+ *    code says so instead of silently dropping the guest on a tableless menu
+ *    (their order would then have no table attached and nobody would notice)
  */
 export async function resolveMenuAccess(
   cookies: AstroCookies,
@@ -87,7 +91,15 @@ export async function resolveMenuAccess(
       setTabCookie(cookies, tab.token);
       return { mode: "ok", table: tab.table_label };
     }
+    // Signature was good but the tab wouldn't open (Supabase down, table not in
+    // the roster). Not the guest's fault and not a forgery — still, don't seat
+    // them silently at no table.
+    return { mode: "invalid" };
   }
 
-  return { mode: "ok", table: null }; // no valid token — browse only
+  // A token was supplied and didn't verify: stale code (secret rotated since it
+  // was printed), tampering, or a guessed label. Say so.
+  if (urlToken) return { mode: "invalid" };
+
+  return { mode: "ok", table: null }; // no token at all — browse only
 }
