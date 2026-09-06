@@ -6,6 +6,7 @@
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
 import { getAdminMenu } from "../../lib/menu/admin";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -14,7 +15,7 @@ import "../../styles/order-builder.css";
 
 export const prerender = false;
 
-const { supabase } = Astro.locals;
+const { supabase, profile } = Astro.locals;
 const menu = await getAdminMenu(supabase);
 
 const params = Astro.url.searchParams;
@@ -31,12 +32,11 @@ const OK_COPY: Record<string, string> = {
 ---
 
 <AppLayout title={`Menu manager — ${brand.name}`}>
-  <main class="st-shell">
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
     <StationMasthead eyebrow={`${brand.name} · Manager`} title="Menu manager">
-      <div class="st-actions" slot="actions">
-        <a class="st-navlink" href="/staff">← Order desk</a>
-        <a class="st-cta" href="/admin/items/new"><span aria-hidden="true">+</span> Add dish</a>
-      </div>
+      <a class="st-cta" slot="actions" href="/admin/items/new">
+        <span aria-hidden="true">+</span> Add dish
+      </a>
     </StationMasthead>
 
     {(ok || err) && (
@@ -107,7 +107,7 @@ const OK_COPY: Record<string, string> = {
         <button class="catnew__add" type="submit">+ Add category</button>
       </form>
     </section>
-  </main>
+  </StationShell>
 </AppLayout>
 
 <script>

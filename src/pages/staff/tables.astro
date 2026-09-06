@@ -10,6 +10,7 @@
 import QRCode from "qrcode";
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
 import { signTableToken, tableTokensConfigured } from "../../lib/orders/table-token";
 import { optionalServerEnv } from "../../lib/env";
 import { brand } from "../../data/brand";
@@ -78,12 +79,8 @@ const prefill = labels.join(", ");
 ---
 
 <AppLayout title={`Table QR codes — ${brand.name}`}>
-  <main class="st-shell tblq">
-    <StationMasthead title="Table QR codes">
-      <a class="st-back" slot="actions" href="/staff">
-        <span aria-hidden="true">←</span> Order desk
-      </a>
-    </StationMasthead>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="tblq">
+    <StationMasthead title="Table QR codes" />
 
     <form class="tblq__form no-print st-rise-2" method="get" action="/staff/tables">
       <div class="st-field">
@@ -150,7 +147,7 @@ const prefill = labels.join(", ");
         </div>
       </section>
     )}
-  </main>
+  </StationShell>
 </AppLayout>
 
 <script>

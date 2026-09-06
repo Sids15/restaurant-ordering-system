@@ -5,7 +5,166 @@
    color, type, or spacing.
    ========================================================================== */
 
-/* --- Shell ------------------------------------------------------------------ */
+/* --- Station layout: sidebar + content ------------------------------------- */
+.stlayout {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.stnav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+  padding: var(--space-24) var(--space-16);
+  border-inline-end: 1px solid var(--border);
+  background: var(--surface-raised);
+  /* The board and the desk both scroll for a long shift; the stations should
+     not scroll away with them. */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+.stnav__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stnav__brand-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-heading-s);
+  line-height: var(--lh-heading);
+  color: var(--ink);
+}
+.stnav__brand-sub {
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  color: var(--ink-muted);
+}
+
+.stnav__links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stnav__link {
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--ink-muted);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.stnav__link:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+/* Driven off aria-current so the marker and the assistive-tech state can't
+   drift apart. */
+.stnav__link[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.stnav__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-block-start: auto;
+  padding-block-start: var(--space-16);
+  border-top: 1px solid var(--border);
+}
+.stnav__who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stnav__name {
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--ink);
+}
+.stnav__role {
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.stnav__signout {
+  align-self: flex-start;
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.stnav__signout:hover {
+  color: var(--ink);
+}
+
+/* Below the breakpoint the sidebar becomes a scrollable top bar — a 15rem rail
+   would eat half a phone. */
+@media (max-width: 60rem) {
+  .stlayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stnav {
+    position: static;
+    max-height: none;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-16);
+    padding: var(--space-12) var(--gutter);
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .stnav__brand-sub {
+    display: none;
+  }
+  .stnav__links {
+    flex-direction: row;
+    gap: var(--space-4);
+  }
+  .stnav__link {
+    white-space: nowrap;
+  }
+  .stnav__foot {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-12);
+    margin-block-start: 0;
+    margin-inline-start: auto;
+    padding-block-start: 0;
+    border-top: 0;
+  }
+  .stnav__who {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-8);
+  }
+}
+
+@media print {
+  .stnav {
+    display: none;
+  }
+  .stlayout {
+    display: block;
+  }
+}
+
 .st-shell {
   max-width: var(--container-lg);
   margin-inline: auto;
@@ -15,46 +174,9 @@
   gap: var(--space-24);
 }
 
-/* --- Masthead actions (slotted, so styled globally) -------------------------- */
-/* Baseline, not centre: the role chip (--fs-label) sits beside links at
-   --fs-caption, and centring two different type sizes leaves their baselines
-   visibly off. `.st-pass` aligns to baseline internally, so the row must too. */
-.st-actions {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-16);
-}
-/* The sign-out button is wrapped in a <form> for the POST. Without this the
-   form is the flex item and the button's baseline never reaches the row. */
-.st-actions form {
-  display: contents;
-}
-.st-actions__div {
-  flex: 0 0 auto;
-  width: 1px;
-  height: 1.25rem;
-  background: var(--border-strong);
-}
-.st-nav {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-16);
-}
-.st-navlink,
-.st-signout {
-  font-family: var(--font-ui);
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  line-height: 1;
-  color: var(--ink-muted);
-  transition: color var(--dur-fast) var(--ease-out);
-}
-.st-navlink:hover,
-.st-signout:hover {
-  color: var(--ink);
-}
+/* --- Masthead action (slotted, so styled globally) --------------------------- */
+/* Station links and identity moved into StationNav; what remains is a page's
+   own primary action and the in-page back link on a tab's bill. */
 .st-cta {
   display: inline-flex;
   align-items: center;
@@ -74,30 +196,7 @@
   background: var(--accent-hover);
 }
 
-/* Identity — who's signed in. */
-.st-pass {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-8);
-}
-.st-pass__name {
-  font-family: var(--font-ui);
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  line-height: 1;
-  color: var(--ink);
-}
-.st-pass__role {
-  font-family: var(--font-ui);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-/* Back link — quiet return arrow */
+/* In-page back link (a tab's bill returns to the tab list). */
 .st-back {
   font-family: var(--font-ui);
   font-size: var(--fs-caption);

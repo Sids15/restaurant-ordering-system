@@ -7,6 +7,7 @@
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
 import KitchenBoard from "../../components/order/KitchenBoard.tsx";
 import AvailabilityPanel from "../../components/order/AvailabilityPanel.tsx";
 import { getActiveKitchenOrders } from "../../lib/orders/kitchen";
@@ -25,23 +26,11 @@ const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
 ---
 
 <AppLayout title={`Kitchen — ${brand.name}`}>
-  <main class="st-shell">
-    <StationMasthead title="Kitchen board">
-      <div class="st-actions" slot="actions">
-        <span class="st-pass">
-          {profile!.name && profile!.name.trim().toLowerCase() !== profile!.role && (
-            <span class="st-pass__name">{profile!.name}</span>
-          )}
-          <span class="st-pass__role">{profile!.role}</span>
-        </span>
-        <form method="post" action="/api/auth/logout">
-          <button class="st-signout" type="submit">Sign out</button>
-        </form>
-      </div>
-    </StationMasthead>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+    <StationMasthead title="Kitchen board" />
 
     <KitchenBoard client:load initialOrders={initialOrders} canComplete={profile!.role === "kitchen"} />
 
     {canEditAvailability && <AvailabilityPanel client:load initialMenu={initialMenu} />}
-  </main>
+  </StationShell>
 </AppLayout>

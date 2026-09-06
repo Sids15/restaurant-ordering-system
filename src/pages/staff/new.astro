@@ -9,6 +9,7 @@
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
 import { getCustomerMenu } from "../../lib/menu/queries";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -39,12 +40,8 @@ const VEG_LABEL: Record<string, string> = {
 ---
 
 <AppLayout title={`Build an order — ${brand.name}`}>
-  <main class="st-shell build">
-    <StationMasthead title="Build an order">
-      <a class="st-back" slot="actions" href="/staff">
-        <span aria-hidden="true">←</span> Order desk
-      </a>
-    </StationMasthead>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="build">
+    <StationMasthead title="Build an order" />
 
     {errorText && <p class="st-alert st-alert--error st-rise" role="alert">{errorText}</p>}
 
@@ -156,7 +153,7 @@ const VEG_LABEL: Record<string, string> = {
         </div>
       </form>
     )}
-  </main>
+  </StationShell>
 </AppLayout>
 
 <script>

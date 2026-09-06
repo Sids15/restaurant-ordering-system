@@ -5,6 +5,7 @@
  */
 import AppLayout from "../../../layouts/AppLayout.astro";
 import StationMasthead from "../../../components/staff/StationMasthead.astro";
+import StationShell from "../../../components/staff/StationShell.astro";
 import DishForm from "../../../components/order/DishForm.astro";
 import { getCategoryOptions } from "../../../lib/menu/admin";
 import { brand } from "../../../data/brand";
@@ -12,18 +13,14 @@ import "../../../styles/staff.css";
 
 export const prerender = false;
 
-const { supabase } = Astro.locals;
+const { supabase, profile } = Astro.locals;
 const categories = await getCategoryOptions(supabase);
 const err = Astro.url.searchParams.get("err");
 ---
 
 <AppLayout title={`Add dish — ${brand.name}`}>
-  <main class="st-shell admin-form">
-    <StationMasthead eyebrow={`${brand.name} · Manager`} title="Add a dish">
-      <a class="st-back" slot="actions" href="/admin">
-        <span aria-hidden="true">←</span> Menu manager
-      </a>
-    </StationMasthead>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="admin-form">
+    <StationMasthead eyebrow={`${brand.name} · Manager`} title="Add a dish" />
 
     {err && <p class="st-alert st-alert--error" role="alert">{err}</p>}
 
@@ -32,7 +29,7 @@ const err = Astro.url.searchParams.get("err");
     ) : (
       <DishForm categories={categories} action="/api/admin/items/new" submitLabel="Add dish" />
     )}
-  </main>
+  </StationShell>
 </AppLayout>
 
 <style>

@@ -6,6 +6,7 @@
  */
 import AppLayout from "../../../layouts/AppLayout.astro";
 import StationMasthead from "../../../components/staff/StationMasthead.astro";
+import StationShell from "../../../components/staff/StationShell.astro";
 import { getOpenTabs } from "../../../lib/orders/tabs";
 import { formatINR } from "../../../lib/money";
 import { brand } from "../../../data/brand";
@@ -31,12 +32,8 @@ function when(iso: string): string {
 ---
 
 <AppLayout title={`Open tabs — ${brand.name}`}>
-  <main class="st-shell tabs">
-    <StationMasthead title="Open tabs">
-      <a class="st-back" slot="actions" href="/staff">
-        <span aria-hidden="true">←</span> Order desk
-      </a>
-    </StationMasthead>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="tabs">
+    <StationMasthead title="Open tabs" />
 
     {tabs.length === 0 ? (
       <p class="st-empty st-rise-2">No open tabs. A tab opens when a table places its first order.</p>
@@ -66,7 +63,7 @@ function when(iso: string): string {
         </ul>
       </>
     )}
-  </main>
+  </StationShell>
 </AppLayout>
 
 <style>

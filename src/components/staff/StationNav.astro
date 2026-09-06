@@ -1,0 +1,75 @@
+---
+/**
+ * StationNav — the persistent back-of-house sidebar. Every station (order desk,
+ * order builder, tabs, QR sheet, kitchen, menu manager) is one click away, so
+ * staff stop hunting for links that used to live in each page's masthead.
+ *
+ * The link set carries the role gating that was previously scattered across the
+ * masthead `actions` slots: a kitchen login never had a route to the order
+ * builder, and that stays true here. Middleware still enforces access — this
+ * only decides what's worth showing.
+ */
+import { brand } from "../../data/brand";
+import type { Role } from "../../lib/types";
+
+interface Props {
+  role: Role;
+  name: string;
+  /** Astro.url.pathname — used to mark the current station. */
+  pathname: string;
+}
+const { role, name, pathname } = Astro.props;
+
+const canTake = role === "manager" || role === "server";
+
+const links = [
+  { href: "/staff", label: "Order desk", show: true },
+  { href: "/staff/new", label: "Build order", show: canTake },
+  { href: "/staff/tabs", label: "Open tabs", show: canTake },
+  { href: "/staff/tables", label: "Table QR codes", show: canTake },
+  { href: "/kitchen", label: "Kitchen board", show: true },
+  { href: "/admin", label: "Menu manager", show: role === "manager" },
+].filter((l) => l.show);
+
+// Longest match wins, so /staff/new marks itself rather than also lighting up
+// /staff — every station link would otherwise match the order desk's prefix.
+const current = links.reduce((best, l) => {
+  const hit = pathname === l.href || pathname.startsWith(`${l.href}/`);
+  return hit && l.href.length > best.length ? l.href : best;
+}, "");
+
+// The seed accounts use the role as the name; showing "kitchen / kitchen"
+// twice reads like a bug, so the name is dropped when it says nothing new.
+const showName = name && name.trim().toLowerCase() !== role;
+---
+
+<aside class="stnav">
+  <a class="stnav__brand" href="/staff">
+    <span class="stnav__brand-name">{brand.name}</span>
+    <span class="stnav__brand-sub">Back of house</span>
+  </a>
+
+  <nav class="stnav__links" aria-label="Stations">
+    {
+      links.map((l) => (
+        <a
+          class="stnav__link"
+          href={l.href}
+          aria-current={current === l.href ? "page" : undefined}
+        >
+          {l.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <div class="stnav__foot">
+    <span class="stnav__who">
+      {showName && <span class="stnav__name">{name}</span>}
+      <span class="stnav__role">{role}</span>
+    </span>
+    <form method="post" action="/api/auth/logout">
+      <button class="stnav__signout" type="submit">Sign out</button>
+    </form>
+  </div>
+</aside>

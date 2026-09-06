@@ -1,0 +1,26 @@
+---
+/**
+ * StationShell — the two-column back-of-house frame: StationNav pinned on the
+ * left, the station's own content on the right. Pages used to open straight
+ * into `<main class="st-shell">`; they now wrap that in this so the sidebar is
+ * declared once instead of in eight places.
+ */
+import StationNav from "./StationNav.astro";
+import type { Role } from "../../lib/types";
+
+interface Props {
+  role: Role;
+  name: string;
+  pathname: string;
+  /** Station-specific modifier on the content column (e.g. "build", "tabs"). */
+  variant?: string;
+}
+const { role, name, pathname, variant } = Astro.props;
+---
+
+<div class="stlayout">
+  <StationNav role={role} name={name} pathname={pathname} />
+  <main class:list={["st-shell", variant]}>
+    <slot />
+  </main>
+</div>
