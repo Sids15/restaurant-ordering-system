@@ -4,8 +4,11 @@
  * separate form deletes it (kept out of the edit form since forms can't nest).
  */
 import AppLayout from "../../../layouts/AppLayout.astro";
+import StationMasthead from "../../../components/staff/StationMasthead.astro";
 import DishForm from "../../../components/order/DishForm.astro";
 import { getItem, getCategoryOptions } from "../../../lib/menu/admin";
+import { brand } from "../../../data/brand";
+import "../../../styles/staff.css";
 
 export const prerender = false;
 
@@ -18,17 +21,18 @@ const categories = item ? await getCategoryOptions(supabase) : [];
 const err = Astro.url.searchParams.get("err");
 ---
 
-<AppLayout title={item ? `Edit ${item.name} — Berlin` : "Dish not found — Berlin"}>
-  <main class="admin-form">
-    <header class="admin-form__bar">
-      <a class="admin-form__back" href="/admin">← Menu manager</a>
-      <h1 class="admin-form__title">{item ? "Edit dish" : "Dish not found"}</h1>
-    </header>
+<AppLayout title={item ? `Edit ${item.name} — ${brand.name}` : `Dish not found — ${brand.name}`}>
+  <main class="st-shell admin-form">
+    <StationMasthead eyebrow={`${brand.name} · Manager`} title={item ? "Edit dish" : "Dish not found"}>
+      <a class="st-back" slot="actions" href="/admin">
+        <span aria-hidden="true">←</span> Menu manager
+      </a>
+    </StationMasthead>
 
-    {err && <p class="flash flash--err" role="alert">{err}</p>}
+    {err && <p class="st-alert st-alert--error" role="alert">{err}</p>}
 
     {!item ? (
-      <p class="admin-form__note">That dish no longer exists.</p>
+      <p class="st-empty">That dish no longer exists.</p>
     ) : (
       <>
         <DishForm
@@ -49,61 +53,28 @@ const err = Astro.url.searchParams.get("err");
 
 <style>
   .admin-form {
-    max-width: 40rem;
-    margin-inline: auto;
-    padding: var(--space-32) var(--gutter) var(--space-64);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-24);
-  }
-  .admin-form__bar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-8);
-    padding-block-end: var(--space-24);
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .admin-form__back {
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .admin-form__back:hover {
-    color: var(--text-strong);
-  }
-  .admin-form__title {
-    font-family: var(--font-display);
-    font-size: var(--fs-display-s);
-    color: var(--text-strong);
-  }
-  .admin-form__note {
-    color: var(--text-muted);
-  }
-  .flash--err {
-    padding: var(--space-12) var(--space-16);
-    font-size: var(--fs-caption);
-    border: 1px solid var(--color-berlin-red);
-    background: color-mix(in srgb, var(--color-berlin-red) 14%, transparent);
-    color: var(--text-strong);
+    max-width: var(--container-md);
   }
   .delete {
     padding-block-start: var(--space-16);
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid var(--border);
   }
   .delete__btn {
     background: none;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
     font: inherit;
-    min-height: 2.5rem;
+    font-weight: 600;
+    min-height: var(--field-height);
     padding-inline: var(--space-24);
     text-transform: uppercase;
-    letter-spacing: var(--tracking-nav);
+    letter-spacing: var(--tracking-label);
     cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .delete__btn:hover {
-    color: var(--text-strong);
-    border-color: var(--color-berlin-red);
+    color: var(--danger);
+    border-color: var(--danger);
   }
 </style>

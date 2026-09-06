@@ -5,8 +5,12 @@
  * lands next. Writes go through the authenticated client — RLS enforces manager.
  */
 import AppLayout from "../../layouts/AppLayout.astro";
+import StationMasthead from "../../components/staff/StationMasthead.astro";
 import { getAdminMenu } from "../../lib/menu/admin";
 import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
+import "../../styles/staff.css";
+import "../../styles/order-builder.css";
 
 export const prerender = false;
 
@@ -26,18 +30,14 @@ const OK_COPY: Record<string, string> = {
 };
 ---
 
-<AppLayout title="Menu manager — Berlin">
-  <main class="admin">
-    <header class="admin__bar">
-      <div>
-        <p class="admin__eyebrow">Berlin · Manager</p>
-        <h1 class="admin__title">Menu manager</h1>
+<AppLayout title={`Menu manager — ${brand.name}`}>
+  <main class="st-shell">
+    <StationMasthead eyebrow={`${brand.name} · Manager`} title="Menu manager">
+      <div class="st-actions" slot="actions">
+        <a class="st-navlink" href="/staff">← Order desk</a>
+        <a class="st-cta" href="/admin/items/new"><span aria-hidden="true">＋</span> Add dish</a>
       </div>
-      <div class="admin__actions">
-        <a class="admin__link" href="/staff">← Order desk</a>
-        <a class="admin__add" href="/admin/items/new">+ Add dish</a>
-      </div>
-    </header>
+    </StationMasthead>
 
     {(ok || err) && (
       <div class="toaster" aria-live="polite">
@@ -47,7 +47,7 @@ const OK_COPY: Record<string, string> = {
     )}
 
     {menu.length === 0 ? (
-      <p class="admin__empty">No categories yet. Category management is coming next.</p>
+      <p class="st-empty">No categories yet. Category management is coming next.</p>
     ) : (
       menu.map((cat) => (
         <section class="cat">
@@ -58,7 +58,7 @@ const OK_COPY: Record<string, string> = {
             <ul class="cat__list">
               {cat.items.map((i) => (
                 <li class={`drow ${i.is_available ? "" : "drow--off"}`}>
-                  <span class={`drow__dot drow__dot--${i.veg_type}`} aria-hidden="true" />
+                  <span class={`vegdot vegdot--${i.veg_type}`} aria-hidden="true" />
                   <span class="drow__name">
                     {i.name}
                     {i.is_signature && <span class="drow__sig">Signature</span>}
@@ -126,67 +126,12 @@ const OK_COPY: Record<string, string> = {
 </script>
 
 <style>
-  .admin {
-    max-width: var(--container-editorial);
-    margin-inline: auto;
-    padding: var(--space-32) var(--gutter) var(--space-64);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-24);
-  }
-  .admin__bar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: var(--space-16);
-    padding-block-end: var(--space-24);
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .admin__eyebrow {
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .admin__title {
-    margin-block-start: var(--space-4);
-    font-family: var(--font-display);
-    font-size: var(--fs-display-s);
-    color: var(--text-strong);
-  }
-  .admin__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-16);
-  }
-  .admin__link {
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .admin__link:hover {
-    color: var(--text-strong);
-  }
-  .admin__add {
-    padding: var(--space-8) var(--space-16);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .admin__add:hover {
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  /* Toast — rises from the bottom, then dismisses itself. */
+  /* --- Toast — rises from the bottom, then dismisses itself. --------------- */
   .toaster {
     position: fixed;
     inset-block-end: calc(var(--space-32) + env(safe-area-inset-bottom, 0px));
     inset-inline: 0;
-    z-index: var(--z-overlay, 200);
+    z-index: var(--z-overlay);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -199,18 +144,19 @@ const OK_COPY: Record<string, string> = {
     max-width: min(32rem, 92vw);
     padding: var(--space-16) var(--space-24);
     font-size: var(--fs-caption);
-    color: var(--text-strong);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-inline-start: 2px solid var(--accent);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+    color: var(--ink);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
     animation: toast-in 0.5s var(--ease-out) both;
   }
   .toast--ok {
-    border-inline-start-color: #4c8b4a;
+    border-inline-start-color: var(--status-ready);
   }
   .toast--err {
-    border-inline-start-color: var(--color-berlin-red);
+    border-inline-start-color: var(--danger);
   }
   .toast--hide {
     animation: toast-out 0.4s var(--ease-out) forwards;
@@ -222,21 +168,25 @@ const OK_COPY: Record<string, string> = {
   @keyframes toast-out {
     to { opacity: 0; transform: translateY(18px); }
   }
-  .admin__empty {
-    padding-block: var(--space-48);
-    text-align: center;
-    color: var(--text-muted);
+
+  /* --- Category card — a bordered surface holding its dish rows ------------ */
+  .cat {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-24);
   }
   .cat__name {
     font-family: var(--font-display);
     font-size: var(--fs-heading-m);
-    color: var(--text-strong);
+    color: var(--ink);
     padding-block-end: var(--space-12);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
   }
   .cat__empty {
     padding-block: var(--space-16);
-    color: var(--text-muted);
+    color: var(--ink-muted);
     font-size: var(--fs-caption);
   }
   .cat__list {
@@ -248,73 +198,60 @@ const OK_COPY: Record<string, string> = {
     align-items: center;
     gap: var(--space-16);
     padding-block: var(--space-16);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
-  .drow__dot {
-    flex: 0 0 auto;
-    width: 0.75rem;
-    height: 0.75rem;
-    border: 1.5px solid currentColor;
-    position: relative;
-  }
-  .drow__dot::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    width: 0.4rem;
-    height: 0.4rem;
-    border-radius: 50%;
-    background: currentColor;
-  }
-  .drow__dot--veg {
-    color: #4c8b4a;
-  }
-  .drow__dot--non_veg {
-    color: #a33227;
-  }
-  .drow__dot--egg {
-    color: #b08a3c;
+  .drow:last-child {
+    border-bottom: none;
+    padding-block-end: 0;
   }
   .drow__name {
     flex: 1 1 auto;
     min-width: 0;
-    color: var(--text-strong);
+    color: var(--ink);
     display: flex;
     align-items: center;
     gap: var(--space-8);
     flex-wrap: wrap;
   }
   .drow--off .drow__name {
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .drow__sig {
     font-size: var(--fs-label);
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
-    border: 1px solid var(--accent-muted);
-    padding: 1px var(--space-8);
+    background: var(--accent-soft);
+    border-radius: var(--radius-pill);
+    padding: 2px var(--space-8);
   }
   .drow__off {
     font-size: var(--fs-label);
-    letter-spacing: var(--tracking-meta);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
-    color: #c76b60;
-    border: 1px solid var(--color-berlin-red);
-    padding: 1px var(--space-8);
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-radius: var(--radius-pill);
+    padding: 2px var(--space-8);
   }
   .drow__price {
     flex: 0 0 auto;
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    font-weight: 600;
+    color: var(--ink);
   }
   .drow__edit {
     flex: 0 0 auto;
     font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
+    font-weight: 600;
     color: var(--accent);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .drow__edit:hover {
+    color: var(--accent-hover);
   }
   .drow__del {
     flex: 0 0 auto;
@@ -322,23 +259,25 @@ const OK_COPY: Record<string, string> = {
     border: none;
     font: inherit;
     font-size: var(--fs-caption);
-    letter-spacing: var(--tracking-meta);
-    text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--ink-muted);
     cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out);
   }
   .drow__del:hover {
-    color: var(--color-berlin-red);
+    color: var(--danger);
   }
 
-  /* --- Categories management --------------------------------------------- */
+  /* --- Categories management ------------------------------------------------ */
   .cats {
-    margin-block-start: var(--space-24);
-    padding-block-start: var(--space-24);
-    border-top: 1px solid var(--border-subtle);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-24);
   }
   .cats__title {
     font-size: var(--fs-caption);
+    font-weight: 600;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--accent);
@@ -362,52 +301,53 @@ const OK_COPY: Record<string, string> = {
     gap: var(--space-8);
   }
   .catnew {
-    margin-block-start: var(--space-24);
+    margin-block-start: var(--space-16);
+    padding-block-start: var(--space-16);
+    border-top: 1px solid var(--border);
     flex-wrap: wrap;
   }
-  .crow__name {
+  .crow__name,
+  .crow__sort {
     padding: var(--space-8) var(--space-12);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-strong);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
     font: inherit;
     /* ≥16px so iOS doesn't zoom-and-reflow on focus (body font is 15px). */
     font-size: max(1rem, var(--fs-body));
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
   .crow__sort {
     width: 4.5rem;
-    padding: var(--space-8) var(--space-12);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-strong);
-    font: inherit;
-    /* ≥16px so iOS doesn't zoom-and-reflow on focus (body font is 15px). */
-    font-size: max(1rem, var(--fs-body));
   }
-  .crow__name:focus,
-  .crow__sort:focus {
+  .crow__name:focus-visible,
+  .crow__sort:focus-visible {
     outline: none;
     border-color: var(--accent);
   }
   .crow__save,
   .crow__del {
     background: none;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
     font: inherit;
     font-size: var(--fs-caption);
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: var(--tracking-meta);
+    letter-spacing: var(--tracking-label);
     padding: var(--space-8) var(--space-16);
     cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
   .crow__save:hover {
-    color: var(--text-strong);
+    color: var(--ink);
     border-color: var(--accent);
   }
   .crow__del:hover:not(:disabled) {
-    color: var(--color-berlin-red);
-    border-color: var(--color-berlin-red);
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .crow__del:disabled {
     opacity: 0.4;
@@ -415,17 +355,23 @@ const OK_COPY: Record<string, string> = {
   }
   .crow__count {
     font-size: var(--fs-caption);
-    color: var(--text-muted);
+    color: var(--ink-muted);
   }
   .catnew__add {
     background: var(--accent);
-    color: var(--color-warm-black);
+    color: var(--on-accent);
     border: none;
+    border-radius: var(--radius-sm);
     font: inherit;
     font-size: var(--fs-caption);
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: var(--tracking-nav);
+    letter-spacing: var(--tracking-label);
     padding: var(--space-8) var(--space-24);
     cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .catnew__add:hover {
+    background: var(--accent-hover);
   }
 </style>
