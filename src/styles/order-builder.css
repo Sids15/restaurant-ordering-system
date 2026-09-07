@@ -118,8 +118,6 @@
 }
 .build__catname {
   flex: 0 0 auto;
-  font-family: var(--font-display);
-  font-size: var(--fs-heading-m);
   color: var(--ink);
 }
 .build__catrule {
@@ -170,7 +168,7 @@
   color: var(--ink);
 }
 .dish__sig {
-  font-size: 0.7rem;
+  font-size: var(--fs-label);
   color: var(--accent);
   transform: translateY(-0.15em);
 }
@@ -255,19 +253,19 @@
   background: currentColor;
 }
 .vegdot--veg {
-  color: #2e7d32;
+  color: var(--veg);
 }
 .vegdot--non_veg {
-  color: #a3312a;
+  color: var(--non-veg);
 }
 .vegdot--egg {
-  color: #b3781c;
+  color: var(--egg);
 }
 
 /* --- Add button — fills with accent on hover ------------------------------ */
 .add {
   width: 100%;
-  min-height: 2.5rem;
+  min-height: var(--tap);
   padding-inline: var(--space-16);
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -363,7 +361,7 @@
   min-width: 16rem;
 }
 
-@media (max-width: 34rem) {
+@media (max-width: 36rem) {
   .build__meta {
     grid-template-columns: 1fr;
     gap: var(--space-24);

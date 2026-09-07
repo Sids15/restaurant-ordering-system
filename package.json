@@ -13,6 +13,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "design": "node scripts/design-lint.mjs",
+    "test": "node scripts/day-range.test.mjs && node scripts/tab-assign.test.mjs && node scripts/design-lint.mjs",
     "scan": "node scripts/safety-scan.mjs",
     "scan:all": "node scripts/safety-scan.mjs --all"
   },

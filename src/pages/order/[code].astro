@@ -136,8 +136,6 @@ const qrSvg = order
   }
   .track__title {
     margin-block-start: var(--space-8);
-    font-family: var(--font-display);
-    font-size: var(--fs-display-l);
     color: var(--ink);
   }
   .track__sub {
@@ -282,6 +280,8 @@ const qrSvg = order
     width: 7rem;
     height: 7rem;
     padding: var(--space-8);
+    /* design-lint: allow-raw-color - the QR's quiet zone stays pure white so a
+       retheme can't tint it below scanning contrast. */
     background: #ffffff;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -321,8 +321,6 @@ const qrSvg = order
     box-shadow: var(--shadow-sm);
   }
   .summary__title {
-    font-family: var(--font-display);
-    font-size: var(--fs-heading-m);
     color: var(--ink);
     padding-block-end: var(--space-16);
     border-bottom: 1px solid var(--border);
@@ -379,6 +377,7 @@ const qrSvg = order
     gap: var(--space-16) var(--space-32);
   }
   .track__link {
+    min-height: var(--tap);
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
@@ -402,7 +401,7 @@ const qrSvg = order
     margin-block-start: var(--space-16);
   }
 
-  @media (max-width: 30rem) {
+  @media (max-width: 36rem) {
     .pass {
       flex-direction: column;
       text-align: center;

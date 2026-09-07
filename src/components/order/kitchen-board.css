@@ -102,9 +102,11 @@
   color: var(--ink-muted);
 }
 /* The only urgency signal on the board, so it is allowed to shout. */
+/* The wait timer. Shaped like .pill but sized for a number read across a pass,
+   so it keeps its own weight and tabular figures. */
 .ticket__wait {
   flex: 0 0 auto;
-  padding: 2px var(--space-8);
+  padding: var(--space-4) var(--space-12);
   border-radius: var(--radius-pill);
   font-size: var(--fs-caption);
   font-weight: 700;
@@ -113,11 +115,13 @@
 }
 .ticket__wait[data-urgency="ok"] {
   color: var(--ink-muted);
-  background: var(--surface);
+  background: var(--surface-sunken);
 }
+/* Amber, not the violet of --status-preparing: this is a ticket ageing, not a
+   ticket's status, and borrowing a lifecycle colour made it read as one. */
 .ticket__wait[data-urgency="warn"] {
-  color: var(--status-preparing);
-  background: var(--status-preparing-soft);
+  color: var(--status-pending);
+  background: var(--status-pending-soft);
 }
 .ticket__wait[data-urgency="late"] {
   color: var(--on-accent);
@@ -219,7 +223,7 @@
 }
 
 /* --- Phones: single column ----------------------------------------------- */
-@media (max-width: 30rem) {
+@media (max-width: 36rem) {
   .board__list {
     grid-template-columns: 1fr;
   }

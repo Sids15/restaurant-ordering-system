@@ -73,15 +73,47 @@ ol {
   color: var(--on-accent);
 }
 
-/* --- Base typography ------------------------------------------------------ */
+/* --- Headings -------------------------------------------------------------
+   One mapping, set on the element so no page can quietly pick a different size
+   for the same level. Before this, h1 resolved to three different sizes across
+   the app and h2 to four, depending which page you were on.
+
+     h1   page title        --fs-display-m
+     h2   section title     --fs-heading-m
+     h3   subsection        --fs-heading-s
+     h4+  minor heading     --fs-body-l
+
+   Heading classes carry layout and colour only; they no longer set a size. A
+   heading that should read as a small uppercase panel label rather than a
+   title takes .h-label — it stays a real heading for the document outline
+   without pretending to be a title visually. */
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 400; /* elegance from scale + spacing, never weight (Section 6) */
   letter-spacing: var(--tracking-display);
   line-height: var(--lh-heading);
   color: var(--ink);
+}
+
+h1 { font-size: var(--fs-display-m); }
+h2 { font-size: var(--fs-heading-m); }
+h3 { font-size: var(--fs-heading-s); }
+h4,
+h5,
+h6 { font-size: var(--fs-body-l); }
+
+.h-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  line-height: var(--lh-body);
+  text-transform: uppercase;
 }
 
 p {
@@ -114,6 +146,46 @@ main {
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--ink-muted);
+}
+
+/* --- Pill: the one status / label chip ------------------------------------
+   This chip had five separate implementations — the order desk's badges, the
+   guest's order history, the tabs ledger, the manager's day view and the menu
+   manager — across three different paddings. They also disagreed on meaning:
+   the day view defined only "cancelled", so pending, confirmed, ready and
+   served all rendered as the same grey. One definition, one set of states. */
+.pill {
+  flex: 0 0 auto;
+  display: inline-block;
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  line-height: var(--lh-body);
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Order lifecycle */
+.pill--pending { color: var(--status-pending); background: var(--status-pending-soft); }
+.pill--confirmed { color: var(--status-confirmed); background: var(--status-confirmed-soft); }
+.pill--preparing { color: var(--status-preparing); background: var(--status-preparing-soft); }
+.pill--ready { color: var(--status-ready); background: var(--status-ready-soft); }
+.pill--served { color: var(--status-served); background: var(--status-served-soft); }
+.pill--cancelled { color: var(--danger); background: var(--danger-soft); }
+
+/* Non-status uses: a live/branded state, and a placeholder for an absent one. */
+.pill--accent { color: var(--accent); background: var(--accent-soft); }
+.pill--empty {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--ink-muted);
+  font-weight: 500;
 }
 
 .visually-hidden {

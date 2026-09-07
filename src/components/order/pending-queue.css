@@ -41,10 +41,6 @@
   padding-block-end: var(--space-16);
 }
 .pending__title {
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--ink);
 }
 .pending__count {
@@ -179,7 +175,7 @@
 }
 .pcard__confirm,
 .pcard__cancel {
-  min-height: 2.5rem;
+  min-height: var(--tap);
   padding-inline: var(--space-16);
   font: inherit;
   font-weight: 600;

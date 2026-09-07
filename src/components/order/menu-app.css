@@ -45,8 +45,6 @@
 }
 .menu__title {
   margin-block-start: var(--space-8);
-  font-family: var(--font-display);
-  font-size: var(--fs-display-l);
   color: var(--ink);
 }
 .menu__tagline {
@@ -187,8 +185,6 @@
 }
 .course__name {
   margin-block-end: var(--space-16);
-  font-family: var(--font-display);
-  font-size: var(--fs-heading-l);
   color: var(--ink);
 }
 
@@ -239,7 +235,7 @@
   color: var(--ink);
 }
 .dish__sig {
-  font-size: 0.7rem;
+  font-size: var(--fs-label);
   color: var(--accent);
 }
 .dish__price {
@@ -292,7 +288,7 @@
 /* Add button */
 .add {
   min-width: 4.5rem;
-  min-height: 2.5rem;
+  min-height: var(--tap);
   padding-inline: var(--space-16);
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -363,13 +359,13 @@
   background: currentColor;
 }
 .vegdot--veg {
-  color: #2e7d32;
+  color: var(--veg);
 }
 .vegdot--non_veg {
-  color: #a3312a;
+  color: var(--non-veg);
 }
 .vegdot--egg {
-  color: #b3781c;
+  color: var(--egg);
 }
 
 /* --- Sticky cart bar -------------------------------------------------------- */
@@ -488,8 +484,6 @@
   border-block-end: 1px solid var(--border);
 }
 .sheet__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-heading-m);
   color: var(--ink);
 }
 .sheet__close {

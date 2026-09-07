@@ -5,6 +5,12 @@
  * printer. Behind the auth middleware (any staff). On screen it's a narrow card
  * on the app surface; @media print switches to ink-on-white receipt stock and
  * hides the buttons.
+ *
+ * design-lint: allow-raw-color - thermal paper is 1-bit. There are no greys to
+ * print, so the slip is pure black on white and inversion is the only emphasis
+ * available; a themed token would dither or vanish.
+ * design-lint: allow-raw-type - the ticket's type is sized in mm against an
+ * 80mm roll, not against the screen scale.
  */
 import AppLayout from "../../../../layouts/AppLayout.astro";
 import { getStaffOrder } from "../../../../lib/orders/staff";
@@ -127,7 +133,7 @@ function when(iso: string): string {
     color: var(--ink-muted);
   }
   .actions__print {
-    min-height: 2.5rem;
+    min-height: var(--tap);
     padding-inline: var(--space-24);
     background: var(--accent);
     color: var(--on-accent);

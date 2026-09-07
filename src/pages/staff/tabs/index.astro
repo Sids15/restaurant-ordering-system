@@ -52,9 +52,9 @@ function when(iso: string): string {
               <a class="ledger__link" href={`/staff/tabs/${t.id}`}>
                 <span class="ledger__table"><span class="ledger__word">Table</span> {t.table_label}</span>
                 {t.assigned ? (
-                  <span class="ledger__server">{assigneeName(t.assigned)}</span>
+                  <span class="pill pill--accent ledger__server">{assigneeName(t.assigned)}</span>
                 ) : (
-                  <span class="ledger__server ledger__server--none">Unassigned</span>
+                  <span class="pill pill--empty ledger__server">Unassigned</span>
                 )}
                 <span class="ledger__meta">
                   {t.order_count} {t.order_count === 1 ? "round" : "rounds"} · since {when(t.opened_at)}
@@ -139,23 +139,8 @@ function when(iso: string): string {
   /* Who's on the table. Sits beside the number because that pairing is the
      whole point of the list; the chip is quiet enough not to compete with it. */
   .ledger__server {
-    flex: 0 0 auto;
     align-self: center;
     margin-inline-end: var(--space-16);
-    padding: var(--space-4) var(--space-12);
-    border-radius: var(--radius-pill);
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: var(--fs-label);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-  }
-  .ledger__server--none {
-    background: transparent;
-    border: 1px dashed var(--border-strong);
-    color: var(--ink-muted);
-    font-weight: 500;
   }
 
   .ledger__meta {
@@ -185,7 +170,7 @@ function when(iso: string): string {
     transform: translateX(4px);
   }
 
-  @media (max-width: 34rem) {
+  @media (max-width: 36rem) {
     .ledger__meta {
       flex-basis: 100%;
       order: 3;

@@ -61,8 +61,8 @@ const OK_COPY: Record<string, string> = {
                   <span class={`vegdot vegdot--${i.veg_type}`} aria-hidden="true" />
                   <span class="drow__name">
                     {i.name}
-                    {i.is_signature && <span class="drow__sig">Signature</span>}
-                    {!i.is_available && <span class="drow__off">86'd</span>}
+                    {i.is_signature && <span class="pill pill--accent">Signature</span>}
+                    {!i.is_available && <span class="pill pill--cancelled">86'd</span>}
                   </span>
                   <span class="drow__price">{formatINR(i.price)}</span>
                   <a class="drow__edit" href={`/admin/items/${i.id}`}>Edit</a>
@@ -79,7 +79,7 @@ const OK_COPY: Record<string, string> = {
     )}
 
     <section class="cats">
-      <h2 class="cats__title">Categories</h2>
+      <h2 class="cats__title h-label">Categories</h2>
       <ul class="cats__list">
         {menu.map((c) => (
           <li class="crow">
@@ -178,8 +178,6 @@ const OK_COPY: Record<string, string> = {
     padding: var(--space-24);
   }
   .cat__name {
-    font-family: var(--font-display);
-    font-size: var(--fs-heading-m);
     color: var(--ink);
     padding-block-end: var(--space-12);
     border-bottom: 1px solid var(--border);
@@ -217,34 +215,21 @@ const OK_COPY: Record<string, string> = {
   .drow--off .drow__name {
     color: var(--ink-muted);
   }
-  .drow__sig {
-    font-size: var(--fs-label);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    color: var(--accent);
-    background: var(--accent-soft);
-    border-radius: var(--radius-pill);
-    padding: 2px var(--space-8);
-  }
-  .drow__off {
-    font-size: var(--fs-label);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    color: var(--danger);
-    background: var(--danger-soft);
-    border-radius: var(--radius-pill);
-    padding: 2px var(--space-8);
-  }
   .drow__price {
     flex: 0 0 auto;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: var(--ink);
   }
+  /* Edit and Delete were bare 13px text — a ~20px target on a counter tablet.
+     They keep the quiet look and gain a finger-sized hit box. */
   .drow__edit {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding-inline: var(--space-8);
+    margin-inline: calc(var(--space-8) * -1);
     font-size: var(--fs-caption);
     font-weight: 600;
     color: var(--accent);
@@ -255,6 +240,11 @@ const OK_COPY: Record<string, string> = {
   }
   .drow__del {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding-inline: var(--space-8);
+    margin-inline: calc(var(--space-8) * -1);
     background: none;
     border: none;
     font: inherit;
@@ -276,10 +266,6 @@ const OK_COPY: Record<string, string> = {
     padding: var(--space-24);
   }
   .cats__title {
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
     color: var(--accent);
     padding-block-end: var(--space-16);
   }
@@ -308,6 +294,7 @@ const OK_COPY: Record<string, string> = {
   }
   .crow__name,
   .crow__sort {
+    min-height: var(--tap);
     padding: var(--space-8) var(--space-12);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -328,6 +315,9 @@ const OK_COPY: Record<string, string> = {
   }
   .crow__save,
   .crow__del {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     background: none;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -358,6 +348,9 @@ const OK_COPY: Record<string, string> = {
     color: var(--ink-muted);
   }
   .catnew__add {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     background: var(--accent);
     color: var(--on-accent);
     border: none;

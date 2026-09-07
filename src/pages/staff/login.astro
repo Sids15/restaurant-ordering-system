@@ -177,7 +177,7 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     margin-block-start: var(--space-8);
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-size: var(--fs-display-xl);
     line-height: var(--lh-heading);
     letter-spacing: var(--tracking-display);
     color: var(--ink);
@@ -223,10 +223,6 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
   }
   .login__title {
     margin-block-start: var(--space-24);
-    font-family: var(--font-display);
-    font-size: var(--fs-display-m);
-    line-height: var(--lh-heading);
-    letter-spacing: var(--tracking-display);
     color: var(--ink);
   }
   .login__sub {

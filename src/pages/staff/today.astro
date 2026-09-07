@@ -123,7 +123,7 @@ function clock(iso: string): string {
                 </span>
               </a>
               <span class="row__amount">{formatINR(t.subtotal)}</span>
-              <span class="tag tag--open">Open</span>
+              <span class="pill pill--accent tag">Open</span>
             </li>
           ))}
           {day.closedTabs.map((t) => (
@@ -137,7 +137,7 @@ function clock(iso: string): string {
                 </span>
               </a>
               <span class="row__amount">{formatINR(t.subtotal)}</span>
-              <span class="tag">Closed</span>
+              <span class="pill tag">Closed</span>
             </li>
           ))}
         </ul>
@@ -161,7 +161,7 @@ function clock(iso: string): string {
                 </span>
               </a>
               <span class="row__amount">{formatINR(o.subtotal)}</span>
-              <span class={`tag tag--${o.status}`}>{o.status}</span>
+              <span class={`pill pill--${o.status} tag`}>{o.status}</span>
             </li>
           ))}
         </ul>
@@ -182,7 +182,7 @@ function clock(iso: string): string {
     align-items: center;
     justify-content: center;
     min-width: 2.5rem;
-    min-height: 2.5rem;
+    min-height: var(--tap);
     padding-inline: var(--space-12);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
@@ -243,8 +243,6 @@ function clock(iso: string): string {
 
   .sec__title {
     margin-block-end: var(--space-12);
-    font-family: var(--font-display);
-    font-size: var(--fs-heading-s);
     color: var(--ink);
   }
 
@@ -296,29 +294,12 @@ function clock(iso: string): string {
     text-decoration: line-through;
   }
 
+  /* The status column lines up down the list, so the pills share a width. */
   .tag {
-    flex: 0 0 auto;
-    min-width: 5rem;
-    padding: 2px var(--space-8);
-    border-radius: var(--radius-pill);
-    background: var(--surface);
-    color: var(--ink-muted);
-    font-size: var(--fs-label);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    text-align: center;
-  }
-  .tag--open {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-  .tag--cancelled {
-    background: var(--danger-soft);
-    color: var(--danger);
+    min-width: 5.5rem;
   }
 
-  @media (max-width: 40rem) {
+  @media (max-width: 48rem) {
     .row {
       flex-wrap: wrap;
     }

@@ -34,11 +34,15 @@
   --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
   --on-accent: #ffffff;
 
-  /* --- Status (order lifecycle) ------------------------------------------- */
-  --status-pending: #c2740c;
-  --status-confirmed: #2563eb;
-  --status-preparing: #7c3aed;
-  --status-ready: #15803d;
+  /* --- Status (order lifecycle) -------------------------------------------
+     Five hues that must stay tellable apart at a glance on a busy board, tuned
+     to one lightness/chroma register so they read as a family beside the warm
+     accent. `confirmed` was a pure #2563eb — the only cold, fully saturated
+     colour in the app, and it showed. */
+  --status-pending: #b06a0a;
+  --status-confirmed: #2f5d8c;
+  --status-preparing: #6b4a9e;
+  --status-ready: #2f6b3a;
   --status-served: #6b6259;
   --danger: #b91c1c;
   --status-pending-soft: color-mix(in srgb, var(--status-pending) 14%, var(--surface));
@@ -47,6 +51,13 @@
   --status-ready-soft: color-mix(in srgb, var(--status-ready) 14%, var(--surface));
   --status-served-soft: color-mix(in srgb, var(--status-served) 14%, var(--surface));
   --danger-soft: color-mix(in srgb, var(--danger) 12%, var(--surface));
+
+  /* --- Diet marks ----------------------------------------------------------
+     The regulatory veg/non-veg/egg dots. Defined once here; menu-app.css and
+     order-builder.css each carried their own copy of these three hexes. */
+  --veg: #2e7d32;
+  --non-veg: #a3312a;
+  --egg: #b3781c;
 
   /* --- Typography --------------------------------------------------------- */
   --font-display: "Fraunces Variable", "Fraunces", Georgia, "Times New Roman", serif;
@@ -66,6 +77,9 @@
   --fs-body: 0.9375rem;
   --fs-caption: 0.8125rem;
   --fs-label: 0.6875rem;
+  /* Smallest step. Receipt field labels and dot legends used to invent 0.6rem
+     and 0.7rem inline; this is the only size below --fs-label. */
+  --fs-micro: 0.625rem;
 
   --lh-heading: 1.15;
   --lh-body: 1.6;
@@ -95,16 +109,36 @@
   --space-96: 6rem;
   --space-section: clamp(3rem, 7vw, 5rem);
 
+  /* --- Breakpoints ---------------------------------------------------------
+     Three tiers, and only three. CSS can't read a custom property inside a
+     @media query, so these are documentation the stylesheets must match by
+     hand — the app previously reflowed at eight different widths, four of them
+     between 30rem and 40rem.
+
+       sm   36rem / 576px   phone -> large phone
+       md   48rem / 768px   tablet portrait
+       lg   60rem / 960px   tablet landscape and up (the sidebar's threshold;
+                            deliberately below 64rem so a 1024px landscape
+                            tablet keeps the rail)
+  */
+  --bp-sm: 36rem;
+  --bp-md: 48rem;
+  --bp-lg: 60rem;
+
   /* --- Containers --------------------------------------------------------- */
   --container-lg: 75rem;   /* 1200px */
   --container-md: 48rem;   /* 768px  */
   --measure: 34rem;
   --gutter: clamp(1rem, 4vw, 2rem);
 
-  /* --- Controls ----------------------------------------------------------- */
+  /* --- Controls ------------------------------------------------------------
+     --tap is the floor for anything a finger has to hit. The app is used on
+     tablets on a service counter, so text-only actions (Edit, Delete) get
+     padded up to it rather than staying link-sized. */
+  --tap: 2.75rem;
   --btn-height: 2.875rem;
   --btn-padding-inline: 1.5rem;
-  --field-height: 2.75rem;
+  --field-height: var(--tap);
 
   /* --- Motion ------------------------------------------------------------- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

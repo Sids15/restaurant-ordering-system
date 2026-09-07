@@ -89,7 +89,7 @@ export default function AvailabilityPanel({
       <div className="avail__cats">
         {menu.map((c) => (
           <div key={c.id} className="avail__cat">
-            <h3 className="avail__catname">{c.name}</h3>
+            <h3 className="avail__catname h-label">{c.name}</h3>
             <ul className="avail__list">
               {c.items.map((it) => (
                 <li key={it.id} className={`arow ${it.is_available ? "" : "arow--off"}`}>

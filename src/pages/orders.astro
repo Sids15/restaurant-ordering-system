@@ -86,7 +86,7 @@ function at(iso: string): string {
                     <p class="round__no">Round {rounds.length - i}</p>
                     <p class="round__meta">{r.code} · {at(r.created_at)}</p>
                   </div>
-                  <span class={`round__status round__status--${STATUS[r.state].tone}`}>
+                  <span class={`pill pill--${STATUS[r.state].tone}`}>
                     {STATUS[r.state].label}
                   </span>
                 </header>
@@ -154,8 +154,6 @@ function at(iso: string): string {
   }
   .hist__title {
     margin-block-start: var(--space-8);
-    font-family: var(--font-display);
-    font-size: var(--fs-display-l);
     color: var(--ink);
   }
   .hist__sub {
@@ -262,28 +260,6 @@ function at(iso: string): string {
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
-  .round__status {
-    flex: 0 0 auto;
-    padding: var(--space-4) var(--space-12);
-    font-size: var(--fs-label);
-    font-weight: 600;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-    border-radius: var(--radius-pill);
-    white-space: nowrap;
-  }
-  .round__status--pending {
-    color: var(--status-pending);
-    background: var(--status-pending-soft);
-  }
-  .round__status--confirmed {
-    color: var(--status-confirmed);
-    background: var(--status-confirmed-soft);
-  }
-  .round__status--cancelled {
-    color: var(--danger);
-    background: var(--danger-soft);
-  }
   .round__lines {
     display: flex;
     flex-direction: column;
@@ -352,6 +328,7 @@ function at(iso: string): string {
   }
 
   .hist__link {
+    min-height: var(--tap);
     align-self: center;
     display: inline-flex;
     align-items: center;
@@ -376,7 +353,7 @@ function at(iso: string): string {
     transform: translateX(4px);
   }
 
-  @media (max-width: 30rem) {
+  @media (max-width: 36rem) {
     .round__foot {
       flex-wrap: wrap;
     }

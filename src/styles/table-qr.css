@@ -1,5 +1,9 @@
 /* =============================================================================
    Table QR provisioning (/staff/tables)
+
+   design-lint: allow-raw-color - a QR needs maximum contrast to scan. The code
+   and its quiet zone stay pure black on white whatever the restaurant themes
+   the rest of the app to.
    Form controls reuse the staff vocabulary (.st-field / .st-btn); this file adds
    the printable card sheet. Screen: raised cards on the app surface in a
    responsive grid. Print: ink-on-white, fixed card size, no card split across a
@@ -116,14 +120,14 @@
 .qrcard__url {
   max-width: 100%;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.6875rem;
+  font-size: var(--fs-label);
   line-height: 1.4;
   color: var(--ink-muted);
   overflow-wrap: anywhere;
 }
 
 /* --- Mobile --------------------------------------------------------------- */
-@media (max-width: 30rem) {
+@media (max-width: 36rem) {
   .sheet__grid {
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
     gap: var(--space-16);

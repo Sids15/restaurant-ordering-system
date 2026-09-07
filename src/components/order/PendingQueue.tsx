@@ -101,7 +101,7 @@ export default function PendingQueue({
   return (
     <section className="pending" aria-label="Orders waiting to be confirmed">
       <header className="pending__head">
-        <h2 className="pending__title">Waiting to confirm</h2>
+        <h2 className="pending__title h-label">Waiting to confirm</h2>
         <span className="pending__count">{orders.length}</span>
       </header>
       <ul className="pending__list">

@@ -61,7 +61,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-8);
-  min-height: 2.75rem;
+  min-height: var(--tap);
   padding-inline: var(--space-12);
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
@@ -238,6 +238,7 @@
 
 /* In-page back link (a tab's bill returns to the tab list). */
 .st-back {
+  min-height: var(--tap);
   font-family: var(--font-ui);
   font-size: var(--fs-caption);
   font-weight: 500;
@@ -394,7 +395,7 @@
   }
 }
 
-@media (max-width: 34rem) {
+@media (max-width: 36rem) {
   .st-shell {
     padding-block-start: var(--space-24);
     gap: var(--space-16);
