@@ -7,12 +7,16 @@
  * creating a customer order and reading it back by code.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { serverEnv } from "../env";
+import { runtimeSecret, serverEnv } from "../env";
 
 export function supabaseAdmin(): SupabaseClient {
   return createClient(
     serverEnv(import.meta.env.SUPABASE_URL, "SUPABASE_URL"),
-    serverEnv(import.meta.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY"),
+    // runtimeSecret, not serverEnv: this key bypasses every RLS policy in the
+    // database, so it must never be substituted into the build output as a
+    // literal. Note the variable is NOT named via import.meta.env here — doing
+    // so is what bakes it in. See lib/env.ts.
+    runtimeSecret("SUPABASE_SERVICE_ROLE_KEY"),
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }

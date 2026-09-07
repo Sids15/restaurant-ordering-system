@@ -52,12 +52,33 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, retryAfterSec: 0 };
 }
 
-/** Best-effort client IP: the left-most X-Forwarded-For hop, else the socket. */
+/**
+ * The client IP, preferring headers the platform controls over ones the client
+ * can influence.
+ *
+ * `x-forwarded-for` is a request header like any other: a caller can send their
+ * own, and whether the edge overwrites or prepends to it is a property of the
+ * deployment, not something this code can rely on. Keying a login throttle off
+ * a value the attacker may set gives them a fresh bucket per request and no
+ * throttle at all — so it is the LAST resort here, not the first.
+ *
+ * `x-vercel-forwarded-for` and `x-real-ip` are set by Vercel's proxy and are not
+ * forwarded from the client, so they are trusted first. Astro's `clientAddress`
+ * is itself derived from x-forwarded-for on this adapter, hence it ranks with
+ * that rather than above it.
+ */
+const IP_SHAPED = /^[0-9a-fA-F.:]{3,45}$/;
+
+function firstHop(value: string | null): string | null {
+  const first = value?.split(",")[0]?.trim();
+  return first && IP_SHAPED.test(first) ? first : null;
+}
+
 export function clientIp(request: Request, fallback?: string | null): string {
-  const xff = request.headers.get("x-forwarded-for");
-  if (xff) {
-    const first = xff.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return fallback?.trim() || "unknown";
+  return (
+    firstHop(request.headers.get("x-vercel-forwarded-for")) ??
+    firstHop(request.headers.get("x-real-ip")) ??
+    firstHop(request.headers.get("x-forwarded-for")) ??
+    (fallback?.trim() || "unknown")
+  );
 }

@@ -91,5 +91,49 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  return next();
+  const response = await next();
+  return withSecurityHeaders(response);
 });
+
+/**
+ * Response hardening. None of this was set before, so the staff console could
+ * be framed by any site (clickjacking a Cancel or Close-tab button), and a
+ * single injected string had no second line of defence.
+ *
+ * script-src keeps 'unsafe-inline' because Astro emits its island-hydration
+ * runtime as inline <script> blocks; removing it would break every interactive
+ * surface. Everything else is locked down, which still blocks the useful half:
+ * no third-party script origins, no <base> rewriting, no plugins, no framing,
+ * and forms can only post back to us.
+ */
+function withSecurityHeaders(response: Response): Response {
+  const h = response.headers;
+
+  // Only meaningful on HTML; skip JSON and asset responses.
+  if (h.get("content-type")?.includes("text/html")) {
+    h.set(
+      "content-security-policy",
+      [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+      ].join("; "),
+    );
+  }
+
+  h.set("x-frame-options", "DENY");
+  h.set("x-content-type-options", "nosniff");
+  h.set("referrer-policy", "strict-origin-when-cross-origin");
+  h.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  if (import.meta.env.PROD) {
+    h.set("strict-transport-security", "max-age=63072000; includeSubDomains; preload");
+  }
+  return response;
+}
