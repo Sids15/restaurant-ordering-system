@@ -10,6 +10,7 @@
  * only decides what's worth showing.
  */
 import { brand } from "../../data/brand";
+import { roleCanAccess } from "../../lib/auth/access";
 import type { Role } from "../../lib/types";
 
 interface Props {
@@ -20,16 +21,18 @@ interface Props {
 }
 const { role, name, pathname } = Astro.props;
 
-const canTake = role === "manager" || role === "server";
-
+// Filtered through the same roleCanAccess() the middleware enforces with, so
+// the rail can never offer a station that bounces you back to the login page.
+// A kitchen account sees the board and nothing else; it has no route to the
+// order desk, because /staff is server+manager only.
 const links = [
-  { href: "/staff", label: "Order desk", show: true },
-  { href: "/staff/new", label: "Build order", show: canTake },
-  { href: "/staff/tabs", label: "Open tabs", show: canTake },
-  { href: "/staff/tables", label: "Table QR codes", show: canTake },
-  { href: "/kitchen", label: "Kitchen board", show: true },
-  { href: "/admin", label: "Menu manager", show: role === "manager" },
-].filter((l) => l.show);
+  { href: "/staff", label: "Order desk" },
+  { href: "/staff/new", label: "Build order" },
+  { href: "/staff/tabs", label: "Open tabs" },
+  { href: "/staff/tables", label: "Table QR codes" },
+  { href: "/kitchen", label: "Kitchen board" },
+  { href: "/admin", label: "Menu manager" },
+].filter((l) => roleCanAccess(l.href, role));
 
 // Longest match wins, so /staff/new marks itself rather than also lighting up
 // /staff — every station link would otherwise match the order desk's prefix.

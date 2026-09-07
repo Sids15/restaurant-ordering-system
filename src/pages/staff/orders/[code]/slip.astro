@@ -56,6 +56,8 @@ function when(iso: string): string {
               ticket. Knocked out of a solid band: thermal paper has no colour,
               but it inverts cleanly, and that is the only emphasis that
               survives steam and a glance from across the pass. */}
+          <p class="kot__brand">{brand.name}</p>
+
           <header class="kot__table">
             <span class="kot__table-word">Table</span>
             <span class="kot__table-num">{order.table_label ?? "—"}</span>
@@ -86,7 +88,7 @@ function when(iso: string): string {
               won't match what's on the paper. */}
           <p class="kot__foot">
             {lineCount} {lineCount === 1 ? "line" : "lines"} · {unitCount}{" "}
-            {unitCount === 1 ? "item" : "items"} · end
+            {unitCount === 1 ? "item" : "items"}
           </p>
         </article>
       </>
@@ -141,54 +143,85 @@ function when(iso: string): string {
      viewport; on screen it renders at the same proportions so what staff check
      is what the roll produces. DM Sans throughout — the display serif is the
      customer's voice and has no business on a line cook's ticket. */
+  /* On screen this is a PREVIEW of a physical slip, so it is shaped like one:
+     80mm-proportioned, white paper, lifted off the app surface. Presented as a
+     UI card instead, the inverted header reads as a stray black slab; presented
+     as paper, it reads as a receipt — and what staff check matches what the
+     roll actually produces. */
   .kot {
-    background: var(--surface-raised);
-    color: var(--ink);
+    width: 100%;
+    max-width: 20rem;
+    background: #fff;
+    color: #17150f;
     font-family: var(--font-ui);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: 2px;
     overflow: hidden;
+    box-shadow:
+      0 1px 2px rgb(23 21 18 / 0.08),
+      0 8px 24px -12px rgb(23 21 18 / 0.3);
   }
 
-  .kot__table {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-8);
-    padding: var(--space-12) var(--space-16);
-    background: var(--ink);
-    color: var(--surface-raised);
-  }
-  .kot__table-word {
+  .kot__brand {
+    padding: var(--space-16) var(--space-16) 0;
+    text-align: center;
     font-size: var(--fs-caption);
     font-weight: 500;
+    color: #6b6459;
+  }
+
+  /* Label above value: "Table" and "Patio" on one baseline forces a tiny word
+     against a huge one and the pairing looks accidental. Stacked, the value
+     can be as large as it likes without dragging the label around. */
+  .kot__table {
+    margin: var(--space-12) var(--space-16) 0;
+    padding: var(--space-8) var(--space-12) var(--space-12);
+    background: #17150f;
+    color: #fff;
+    border-radius: 2px;
+  }
+  .kot__table-word {
+    display: block;
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    opacity: 0.75;
   }
   .kot__table-num {
-    font-size: 2.25rem;
+    display: block;
+    margin-block-start: 2px;
+    /* Scales down for a long label ("Patio") and stays huge for "7". */
+    font-size: clamp(1.75rem, 1.1rem + 3vw, 2.5rem);
     font-weight: 700;
-    line-height: 1;
+    line-height: 1.05;
     letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
   }
 
   .kot__meta {
     display: flex;
     justify-content: space-between;
-    gap: var(--space-16);
+    gap: var(--space-12);
     padding: var(--space-8) var(--space-16);
-    border-bottom: 2px solid var(--ink);
     font-size: var(--fs-caption);
     font-variant-numeric: tabular-nums;
-    color: var(--ink-muted);
+    color: #6b6459;
   }
 
   .kot__ordernote {
-    padding: var(--space-8) var(--space-16);
-    border-bottom: 1px dashed var(--border-strong);
+    margin: 0 var(--space-16);
+    padding: var(--space-8) var(--space-12);
+    background: #17150f;
+    color: #fff;
+    border-radius: 2px;
+    font-size: var(--fs-caption);
     font-weight: 600;
   }
 
   .kot__items {
+    margin-block-start: var(--space-12);
     padding-inline: var(--space-16);
+    border-top: 1px dashed #b9b2a5;
   }
   /* Dashed, not hairline: a 1px grey rule dithers on thermal paper and can
      disappear entirely. A dash pattern always prints. */
@@ -196,7 +229,7 @@ function when(iso: string): string {
     display: flex;
     gap: var(--space-12);
     padding-block: var(--space-12);
-    border-bottom: 1px dashed var(--border-strong);
+    border-bottom: 1px dashed #b9b2a5;
   }
   .kot__item:last-child {
     border-bottom: 0;
@@ -228,18 +261,19 @@ function when(iso: string): string {
   .kot__note {
     align-self: flex-start;
     padding: 2px var(--space-8);
-    background: var(--ink);
-    color: var(--surface-raised);
+    background: #17150f;
+    color: #fff;
+    border-radius: 2px;
     font-size: var(--fs-caption);
     font-weight: 600;
   }
 
   .kot__foot {
-    padding: var(--space-8) var(--space-16) var(--space-16);
-    border-top: 2px solid var(--ink);
+    padding: var(--space-12) var(--space-16) var(--space-24);
+    text-align: center;
     font-size: var(--fs-caption);
     font-variant-numeric: tabular-nums;
-    color: var(--ink-muted);
+    color: #6b6459;
   }
 
   @media print {
@@ -266,37 +300,46 @@ function when(iso: string): string {
        and the inverted blocks must print as solid ink, not be "optimised" away
        by the browser's background-graphics default. */
     .kot {
-      border: 0;
+      max-width: none;
       border-radius: 0;
+      box-shadow: none;
       background: #fff;
       color: #000;
     }
+    /* The paper is the page, so the preview's inset margins go away. */
+    .kot__brand,
+    .kot__meta,
+    .kot__items,
+    .kot__foot {
+      padding-inline: 0;
+    }
     .kot__table,
-    .kot__note {
+    .kot__ordernote {
+      margin-inline: 0;
+      border-radius: 0;
+    }
+    /* Thermal paper is 1-bit: every grey becomes a dither pattern that muddies
+       under kitchen heat. Collapse to pure ink, and force the inverted blocks
+       to print solid rather than be dropped as "background graphics". */
+    .kot__table,
+    .kot__note,
+    .kot__ordernote {
       background: #000 !important;
       color: #fff !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
+    .kot__brand,
     .kot__meta,
     .kot__foot {
       color: #000;
     }
-    .kot__meta,
-    .kot__foot,
-    .kot__item,
-    .kot__ordernote {
+    .kot__items,
+    .kot__item {
       border-color: #000;
     }
-    .kot__table,
-    .kot__meta,
-    .kot__ordernote,
-    .kot__items,
-    .kot__foot {
-      padding-inline: 0;
-    }
     .kot__table {
-      padding: 2mm 3mm;
+      padding: 2mm 3mm 3mm;
     }
     .kot__table-num {
       font-size: 13mm;
