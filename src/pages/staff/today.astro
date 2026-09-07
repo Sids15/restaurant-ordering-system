@@ -172,6 +172,15 @@ function stamp(iso: string): string {
                   {clock(o.created_at)} ·{" "}
                   {o.table_label ? `Table ${o.table_label}` : "No table"} ·{" "}
                   {o.source === "customer" ? "Guest" : "Server"}
+                  {/* A void is the one action that makes money disappear, so
+                      the day view says who did it. */}
+                  {o.status === "cancelled" && (
+                    <span class="row__void">
+                      {o.cancelled_by
+                        ? ` · voided by ${assigneeName(o.cancelled_by)}`
+                        : " · voided (author not recorded)"}
+                    </span>
+                  )}
                 </span>
               </a>
               <span class="row__amount">{formatINR(o.subtotal)}</span>
@@ -301,6 +310,10 @@ function stamp(iso: string): string {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
+  }
+  .row__void {
+    color: var(--danger);
+    font-weight: 600;
   }
   .row--void .row__title,
   .row--void .row__amount {

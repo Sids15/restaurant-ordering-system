@@ -156,10 +156,19 @@ export async function confirmOrder(
   return { ok: true, status: "confirmed" };
 }
 
-/** Cancel an order that hasn't been served yet. */
+/**
+ * Cancel an order that hasn't been served yet, recording who did it.
+ *
+ * Attribution is the point: voiding a round is how cash goes missing in a
+ * restaurant, and it was the one money-moving action this app didn't sign.
+ * `byUserId` is required rather than optional so a new call site can't quietly
+ * drop it. ORDER_FLOW already blocks cancelling once a round is ready or
+ * served — only pending and confirmed rounds can be voided.
+ */
 export async function cancelOrder(
   supabase: SupabaseClient,
   code: string,
+  byUserId: string,
 ): Promise<OrderActionResult> {
   const { data: order, error } = await supabase
     .from("orders")
@@ -174,10 +183,17 @@ export async function cancelOrder(
     return { ok: false, error: `Can't cancel an order that's already ${order.status}.` };
   }
 
+  // Guard the status in the WHERE, as confirm does, so two servers hitting
+  // Cancel at once can't both write an author.
   const { error: upErr } = await supabase
     .from("orders")
-    .update({ status: "cancelled" })
-    .eq("id", order.id);
+    .update({
+      status: "cancelled",
+      cancelled_by: byUserId,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", order.id)
+    .eq("status", order.status);
 
   if (upErr) return { ok: false, error: "Couldn't cancel — please retry." };
   return { ok: true, status: "cancelled" };

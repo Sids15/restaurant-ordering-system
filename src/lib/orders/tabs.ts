@@ -9,7 +9,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TabStatus } from "../types";
 import { computeBill, type BillTotals } from "../billing";
-import { ASSIGNED_EMBED, selectTabs, type Assignee } from "./assign";
+import { ASSIGNED_EMBED, type Assignee } from "./assign";
+import { selectOptional } from "../supabase/optional-columns";
+
+const MIGRATION = "supabase/migrations/008_tab_assignment.sql";
 
 export interface OpenTab {
   tabId: string;
@@ -113,7 +116,7 @@ export interface TabBill {
 
 /** Open tabs with a running total, for the /staff/tabs list. Oldest first. */
 export async function getOpenTabs(supabase: SupabaseClient): Promise<OpenTabSummary[]> {
-  const { data, error } = await selectTabs<Record<string, unknown>[]>((withAssignment) =>
+  const { data, error } = await selectOptional<Record<string, unknown>[]>((withAssignment) =>
     supabase
       .from("tabs")
       .select(
@@ -122,6 +125,7 @@ export async function getOpenTabs(supabase: SupabaseClient): Promise<OpenTabSumm
       )
       .eq("status", "open")
       .order("opened_at", { ascending: true }),
+    MIGRATION,
   );
 
   if (error || !data) return [];
@@ -149,7 +153,7 @@ export async function getTabBill(
   supabase: SupabaseClient,
   tabId: string,
 ): Promise<TabBill | null> {
-  const { data, error } = await selectTabs<Record<string, unknown>>((withAssignment) =>
+  const { data, error } = await selectOptional<Record<string, unknown>>((withAssignment) =>
     supabase
       .from("tabs")
       .select(
@@ -159,6 +163,7 @@ export async function getTabBill(
       )
       .eq("id", tabId)
       .maybeSingle(),
+    MIGRATION,
   );
 
   if (error || !data) return null;

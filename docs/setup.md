@@ -15,6 +15,11 @@ In the Supabase dashboard → **SQL Editor**, run in order:
 
 (Or, with the Supabase CLI: `supabase db push` then run the seed.)
 
+> **One restaurant per Supabase project.** Setting up a second restaurant means
+> a second Supabase project and a second deployment, never a second deployment
+> against this database — RLS gates on *being staff*, not on which venue, so
+> they would see each other's orders and takings. See `docs/architecture.md`.
+
 ## 3. Create staff accounts
 - Dashboard → **Authentication → Users → Add user** (email + password) for each
   staff member. Tick **Auto Confirm User** so they can sign in straight away.

@@ -9,7 +9,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { localDateKey, type DayRange } from "./day";
 import type { TabStatus } from "../types";
-import { ASSIGNED_EMBED, selectTabs, type Assignee } from "./assign";
+import { ASSIGNED_EMBED, type Assignee } from "./assign";
+import { selectOptional } from "../supabase/optional-columns";
 
 export interface DayOrder {
   code: string;
@@ -18,6 +19,9 @@ export interface DayOrder {
   source: string;
   subtotal: number;
   created_at: string;
+  /** Who voided it, for a cancelled order. Null on anything cancelled before
+   *  009_cancellation_audit.sql, which has no author to attribute. */
+  cancelled_by: Assignee | null;
 }
 
 export interface DayTab {
@@ -61,8 +65,11 @@ export interface DaySummary {
 
 const COUNTS_AS_MONEY = (status: string) => status !== "cancelled";
 
+const TABS_MIGRATION = "supabase/migrations/008_tab_assignment.sql";
+const ORDERS_MIGRATION = "supabase/migrations/009_cancellation_audit.sql";
+
 // Shared by the open and closed tab reads. The assignment embed drops out when
-// 008_tab_assignment.sql hasn't been applied yet — see selectTabs().
+// 008_tab_assignment.sql hasn't been applied yet — see selectOptional().
 const tabColumns = (withAssignment: boolean) =>
   "id, table_label, status, opened_at, closed_at, " +
   (withAssignment ? `${ASSIGNED_EMBED}, ` : "") +
@@ -97,20 +104,29 @@ export async function getDaySummary(
   const isToday = range.key === localDateKey();
 
   const [ordersRes, openRes, closedRes] = await Promise.all([
-    supabase
-      .from("orders")
-      .select("code, table_label, status, source, subtotal, created_at")
-      .gte("created_at", from)
-      .lt("created_at", to)
-      .order("created_at", { ascending: false }),
-    selectTabs<Record<string, unknown>[]>((a) => {
+    selectOptional<Record<string, unknown>[]>(
+      (withAuthor) =>
+        supabase
+          .from("orders")
+          .select(
+            "code, table_label, status, source, subtotal, created_at" +
+              (withAuthor
+                ? ", cancelled_by:profiles!orders_cancelled_by_fkey ( id, name, role )"
+                : ""),
+          )
+          .gte("created_at", from)
+          .lt("created_at", to)
+          .order("created_at", { ascending: false }),
+      ORDERS_MIGRATION,
+    ),
+    selectOptional<Record<string, unknown>[]>((a) => {
       const q = supabase.from("tabs").select(tabColumns(a)).eq("status", "open");
       return (isToday ? q : q.gte("opened_at", from).lt("opened_at", to)).order(
         "opened_at",
         { ascending: true },
       );
-    }),
-    selectTabs<Record<string, unknown>[]>((a) =>
+    }, TABS_MIGRATION),
+    selectOptional<Record<string, unknown>[]>((a) =>
       supabase
         .from("tabs")
         .select(tabColumns(a))
@@ -118,6 +134,7 @@ export async function getDaySummary(
         .gte("closed_at", from)
         .lt("closed_at", to)
         .order("closed_at", { ascending: false }),
+      TABS_MIGRATION,
     ),
   ]);
 
@@ -128,6 +145,7 @@ export async function getDaySummary(
     source: o.source as string,
     subtotal: Number(o.subtotal),
     created_at: o.created_at as string,
+    cancelled_by: (o.cancelled_by as Assignee | null) ?? null,
   }));
 
   const openTabs = (openRes.data ?? []).map((t) => tabRow(t, range.start));

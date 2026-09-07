@@ -2,7 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 import { supabaseServer } from "./lib/supabase/server";
 import { loadStaff } from "./lib/auth/session";
 import { roleCanAccess } from "./lib/auth/access";
-import { rateLimit, clientIp } from "./lib/http/rate-limit";
+import { rateLimitShared, clientIp } from "./lib/http/rate-limit";
 
 /**
  * Guards the staff-facing surfaces. Every request gets a request-scoped Supabase
@@ -29,12 +29,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (context.request.method === "POST") {
     const ip = clientIp(context.request, context.clientAddress);
     if (pathname === "/api/auth/login") {
-      const rl = rateLimit(`login:${ip}`, 10, 5 * 60_000);
+      const rl = await rateLimitShared(`login:${ip}`, 10, 5 * 60_000);
       if (!rl.ok) {
         return context.redirect("/staff/login?error=throttled", 303);
       }
     } else if (pathname === "/api/orders") {
-      const rl = rateLimit(`orders:${ip}`, 30, 60_000);
+      const rl = await rateLimitShared(`orders:${ip}`, 30, 60_000);
       if (!rl.ok) {
         return new Response(
           JSON.stringify({ error: "Too many orders too quickly — please wait a moment." }),

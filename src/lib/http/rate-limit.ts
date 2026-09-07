@@ -1,18 +1,24 @@
 /**
- * Best-effort in-memory rate limiter (fixed window).
+ * Rate limiting, shared across instances when a store is configured.
  *
- * SCOPE + LIMITATION: this lives in the serverless function's memory, so each
- * warm instance has its own counters and a cold start resets them. That makes it
- * a real backstop against a single client hammering one instance (credential
- * stuffing, an order-flood script) — but NOT a distributed guarantee. For hard,
- * cross-instance limits move this to a shared store (Vercel KV / Upstash) keyed
- * the same way; the call sites here won't need to change.
+ * Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or the KV_REST_API_*
+ * pair Vercel's marketplace integration injects) and every instance counts
+ * against one window, which is what makes a login throttle actually hold.
+ * Without them it falls back to per-instance memory: still a real backstop
+ * against one client hammering one instance, but a warm pool multiplies the
+ * effective limit by the number of instances and a cold start resets it.
+ *
+ * The store is never allowed to break sign-in. A missing config, a timeout or
+ * an error falls through to the in-memory counter rather than locking staff out
+ * of their own console mid-service.
  *
  * Deliberately NOT applied to the customer read-polls (/api/menu/availability
  * every 2s, /api/orders/<code> every 4s): a whole restaurant shares one NAT IP,
  * so a per-IP limit low enough to stop a scraper would also break legitimate
  * polling. Those are protected by token/code entropy instead.
  */
+import { optionalRuntimeSecret } from "../env";
+
 interface Bucket {
   count: number;
   resetAt: number;
@@ -81,4 +87,65 @@ export function clientIp(request: Request, fallback?: string | null): string {
     firstHop(request.headers.get("x-forwarded-for")) ??
     (fallback?.trim() || "unknown")
   );
+}
+
+// --- Shared window (Upstash REST; no dependency, just fetch) -----------------
+
+/** Read at call time, never named via import.meta.env — see lib/env.ts. */
+function store(): { url: string; token: string } | null {
+  const url = optionalRuntimeSecret("UPSTASH_REDIS_REST_URL") ?? optionalRuntimeSecret("KV_REST_API_URL");
+  const token =
+    optionalRuntimeSecret("UPSTASH_REDIS_REST_TOKEN") ?? optionalRuntimeSecret("KV_REST_API_TOKEN");
+  return url && token ? { url: url.replace(/\/+$/, ""), token } : null;
+}
+
+/** True when counters are shared across instances rather than per-instance. */
+export function rateLimitIsShared(): boolean {
+  return store() !== null;
+}
+
+/**
+ * Count one hit against `key` in the shared window, falling back to the
+ * in-memory counter when no store is configured or the store doesn't answer.
+ *
+ * INCR then PEXPIRE ... NX sets the TTL only on the first hit of a window, so
+ * the window is fixed rather than sliding forward with every request — an
+ * attacker can't hold a bucket open by continuing to knock.
+ */
+export async function rateLimitShared(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const s = store();
+  if (!s) return rateLimit(key, limit, windowMs);
+
+  try {
+    const res = await fetch(`${s.url}/pipeline`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${s.token}`, "content-type": "application/json" },
+      body: JSON.stringify([
+        ["INCR", key],
+        ["PEXPIRE", key, String(windowMs), "NX"],
+        ["PTTL", key],
+      ]),
+      // A slow store must not become a slow login.
+      signal: AbortSignal.timeout(1000),
+    });
+    if (!res.ok) throw new Error(`store responded ${res.status}`);
+
+    const [incr, , pttl] = (await res.json()) as { result: number }[];
+    const count = Number(incr?.result);
+    if (!Number.isFinite(count)) throw new Error("unreadable store response");
+
+    const ttlMs = Number(pttl?.result);
+    return {
+      ok: count <= limit,
+      retryAfterSec: Math.max(1, Math.ceil((ttlMs > 0 ? ttlMs : windowMs) / 1000)),
+    };
+  } catch (err) {
+    // Fail over, never fail shut: a store outage must not lock staff out.
+    console.warn("[rate-limit] shared store unavailable, using in-memory:", err);
+    return rateLimit(key, limit, windowMs);
+  }
 }

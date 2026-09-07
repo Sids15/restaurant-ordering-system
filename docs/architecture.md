@@ -55,6 +55,33 @@ Menu is **public-read** (available items only). Orders are **staff-only**, excep
 a customer creating and tracking **their own** order — which goes through our
 API routes, not broad anon access.
 
+Every cash-moving action is signed: `orders.confirmed_by`, `orders.cancelled_by`
+(+ `cancelled_at`), and `tabs.closed_by`. Voiding a round is the classic
+front-of-house fraud, so it records its author like the others do.
+
+---
+
+## One restaurant per deployment
+
+**There is no `restaurant_id` anywhere in the schema, and this is deliberate.**
+The brand is a build-time constant (`src/data/brand.ts`), the table labels are
+free text, and RLS gates on *being staff* — `is_staff()` — not on *which venue*.
+
+So each restaurant needs **its own Supabase project and its own Vercel
+deployment**. That keeps the model simple and the isolation absolute: two
+restaurants share no database, so no query can cross between them.
+
+The failure mode to avoid: pointing two deployments at one Supabase project to
+save on setup. Every staff member of one restaurant would then read the other's
+orders, tabs, takings and menu, because from RLS's point of view they are all
+simply staff. Nothing in the code would report an error — it would just quietly
+be one restaurant's data on another's screen.
+
+Adding real multi-tenancy later means a `restaurant_id` on every table, a
+tenant claim on the session, and rewriting every RLS policy to match it. That is
+a schema-wide change, so decide before onboarding a second venue rather than
+after.
+
 ---
 
 ## Data model (Postgres)

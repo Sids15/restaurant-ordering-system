@@ -1,10 +1,12 @@
-// Mirror of the fallback in lib/orders/assign.ts, exercised directly (the real
-// module imports through Astro's alias, which node can't resolve standalone).
+// Mirror of the fallback in lib/supabase/optional-columns.ts, exercised
+// directly (the real module imports through Astro's alias, which node can't
+// resolve standalone).
 //
-// What this guards: pushing the code before applying 008_tab_assignment.sql
-// must NOT blank the open-tabs list. PostgREST rejects the unknown embed, every
-// caller does `if (error) return []`, and the surface servers bill from goes
-// empty. selectTabs re-runs the query without the embed instead.
+// What this guards: migrations are applied by hand, so the deployed code is
+// always briefly ahead of the database. PostgREST rejects a query naming a
+// column it doesn't know, and every caller here reads an error as "no rows" —
+// which would blank the open-tabs list servers bill from, and zero out the
+// takings on the manager's day view. selectOptional re-runs without them.
 async function selectTabs(run) {
   const first = await run(true);
   if (!first.error) return first;

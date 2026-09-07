@@ -8,7 +8,7 @@
 import type { APIRoute } from "astro";
 import { supabaseServer } from "../../../lib/supabase/server";
 import { safeNext } from "../../../lib/http/safe-next";
-import { rateLimit } from "../../../lib/http/rate-limit";
+import { rateLimitShared } from "../../../lib/http/rate-limit";
 
 export const prerender = false;
 
@@ -26,7 +26,7 @@ export const POST: APIRoute = async (context) => {
   // limit alone does nothing against a spread-out attempt on a single known
   // account — one guess per address, from many addresses. Keyed on the
   // lowercased email so casing can't buy a fresh bucket.
-  const attempt = rateLimit(`login-account:${email.toLowerCase()}`, 10, 15 * 60_000);
+  const attempt = await rateLimitShared(`login-account:${email.toLowerCase()}`, 10, 15 * 60_000);
   if (!attempt.ok) {
     return context.redirect(loginUrl(next, "throttled"), 303);
   }

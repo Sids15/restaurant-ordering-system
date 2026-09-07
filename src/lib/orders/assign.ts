@@ -124,24 +124,3 @@ export async function claimTabIfUnassigned(
  * (assigned_to and closed_by), so the relationship must be named.
  */
 export const ASSIGNED_EMBED = "assigned:profiles!tabs_assigned_to_fkey ( id, name, role )";
-
-/**
- * Run a tab select that embeds the assignment, falling back to the same query
- * without it when the column isn't there yet.
- *
- * Without this, pushing the code before applying 008_tab_assignment.sql makes
- * PostgREST reject the embed, and every caller's `if (error) return []` turns a
- * missing OPTIONAL feature into a blank open-tabs list — the surface servers
- * bill from. The retry keeps the old behaviour until the migration lands, then
- * stops firing on its own.
- */
-export async function selectTabs<T>(
-  run: (withAssignment: boolean) => PromiseLike<{ data: T | null; error: unknown }>,
-): Promise<{ data: T | null; error: unknown }> {
-  const first = await run(true);
-  if (!first.error) return first;
-  console.warn(
-    "[tabs] assignment unavailable — apply supabase/migrations/008_tab_assignment.sql",
-  );
-  return run(false);
-}

@@ -25,7 +25,7 @@ export const POST: APIRoute = async (context) => {
     action === "confirm"
       ? await confirmOrder(supabase, code, gate.user.id)
       : action === "cancel"
-        ? await cancelOrder(supabase, code)
+        ? await cancelOrder(supabase, code, gate.user.id)
         : ({ ok: false, error: "Unknown action." } as const);
 
   // fetch callers (the pending queue) want JSON; form posts want the redirect.
