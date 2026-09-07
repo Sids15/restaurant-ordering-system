@@ -29,6 +29,7 @@ const menu = await getCustomerMenu();
 const err = Astro.url.searchParams.get("err");
 const ERROR_COPY: Record<string, string> = {
   empty: "Add at least one dish before creating the order.",
+  table: "Enter the table this order is for.",
 };
 const errorText = err ? (ERROR_COPY[err] ?? err) : null;
 
@@ -54,7 +55,15 @@ const VEG_LABEL: Record<string, string> = {
         <section class="build__meta">
           <label class="st-field">
             <span class="st-field__label">Table</span>
-            <input class="st-field__input" type="text" name="table_label" placeholder="e.g. 12" autocomplete="off" autofocus />
+            <input
+              class="st-field__input"
+              type="text"
+              name="table_label"
+              placeholder="e.g. 12"
+              autocomplete="off"
+              required
+              autofocus
+            />
           </label>
           <label class="st-field">
             <span class="st-field__label">Order note (optional)</span>
@@ -164,6 +173,7 @@ const VEG_LABEL: Record<string, string> = {
   const countEl = document.querySelector<HTMLElement>("[data-count]");
   const totalEl = document.querySelector<HTMLElement>("[data-total]");
   const submit = document.querySelector<HTMLButtonElement>("[data-submit]");
+  const table = document.querySelector<HTMLInputElement>("[name='table_label']");
   const fmt = new Intl.NumberFormat("en-IN");
 
   function recompute() {
@@ -176,9 +186,20 @@ const VEG_LABEL: Record<string, string> = {
       items += qty;
       total += qty * price;
     }
-    if (countEl) countEl.textContent = items === 0 ? "No dishes yet" : `${items} ${items === 1 ? "dish" : "dishes"}`;
+    // The order needs a table as well as dishes: without one it can't join the
+    // table's tab, so it bills separately from the guest's other rounds. Say
+    // which one is missing rather than leaving a dead button.
+    const hasTable = Boolean(table?.value.trim());
+    if (countEl) {
+      countEl.textContent =
+        items === 0
+          ? "No dishes yet"
+          : hasTable
+            ? `${items} ${items === 1 ? "dish" : "dishes"}`
+            : "Add a table to confirm";
+    }
     if (totalEl) totalEl.textContent = items === 0 ? "" : `₹${fmt.format(total)}`;
-    if (submit) submit.disabled = items === 0;
+    if (submit) submit.disabled = items === 0 || !hasTable;
   }
 
   for (const g of groups) {
@@ -205,6 +226,7 @@ const VEG_LABEL: Record<string, string> = {
     g.querySelector<HTMLButtonElement>("[data-dec]")?.addEventListener("click", () => set((Number(input.value) || 0) - 1));
   }
 
+  table?.addEventListener("input", recompute);
   recompute();
 
   // --- Filters: one active category (admin's categories) + veg chips --------

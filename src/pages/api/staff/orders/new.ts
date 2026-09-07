@@ -1,9 +1,14 @@
 /**
  * POST /api/staff/orders/new — a server builds an order at the table and it
  * lands already confirmed (source: server). The form posts a `qty_<itemId>`
- * field per dish plus an optional table + note; we turn the positive quantities
- * into lines and hand them to createOrder, which re-reads live prices. Only
- * roles that take orders (manager, server) may do this.
+ * field per dish plus the table and an optional note; we turn the positive
+ * quantities into lines and hand them to createOrder, which re-reads live
+ * prices. Only roles that take orders (manager, server) may do this.
+ *
+ * The table is required. A server-built order without one can't open a tab, so
+ * it never joins the table's bill, never inherits an assigned server, and shows
+ * on the docket as "No table" with nowhere to carry it — the guest's other
+ * rounds bill separately from this one.
  */
 import type { APIRoute } from "astro";
 import { requireStaff } from "../../../../lib/auth/session";
@@ -18,8 +23,11 @@ export const POST: APIRoute = async (context) => {
   if (gate instanceof Response) return gate;
 
   const form = await context.request.formData();
-  const table_label = String(form.get("table_label") ?? "");
+  const table_label = String(form.get("table_label") ?? "").trim();
   const notes = String(form.get("notes") ?? "");
+
+  // The input carries `required`, so this is the bypassed-form case.
+  if (!table_label) return context.redirect("/staff/new?err=table", 303);
 
   // Collect qty_<itemId> fields with a positive quantity.
   const lines: CreateOrderLine[] = [];
@@ -37,9 +45,7 @@ export const POST: APIRoute = async (context) => {
 
   // A server-built order joins the table's open tab (or opens one), so it bills
   // with the guest's rounds and their scanned session shares the same tab.
-  const tab = table_label.trim()
-    ? await openOrJoinTab(context.locals.supabase, table_label.trim())
-    : null;
+  const tab = await openOrJoinTab(context.locals.supabase, table_label);
 
   const result = await createOrder(
     { table_label, notes, lines },
