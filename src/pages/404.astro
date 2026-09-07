@@ -1,0 +1,27 @@
+---
+/**
+ * 404 — an address that doesn't exist. Astro renders this for any unmatched
+ * route in SSR.
+ *
+ * The likeliest cause here isn't a broken link, it's a QR code: a card that was
+ * printed before TABLE_TOKEN_SECRET was rotated, or one that got smudged or
+ * mis-scanned. So the copy names that possibility rather than shrugging — a
+ * guest who knows the sticker is the problem asks a server instead of giving up
+ * on ordering. (A code that scans but fails its signature never reaches here;
+ * /menu/[token] catches that and says so on the menu itself.)
+ */
+import ErrorPage from "../components/ErrorPage.astro";
+
+export const prerender = false;
+---
+
+<ErrorPage code={404} title="This page doesn't exist" pathname={Astro.url.pathname}>
+  <p>
+    The link may be out of date, or the address slightly off.
+  </p>
+  <p>
+    If you got here by scanning the code on your table, that sticker may have
+    been replaced. <strong>Ask a server for a fresh one</strong> — your table can
+    still order.
+  </p>
+</ErrorPage>

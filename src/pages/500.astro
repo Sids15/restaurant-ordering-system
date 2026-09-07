@@ -1,0 +1,41 @@
+---
+/**
+ * 500 — something threw on the server. Astro renders this for an uncaught
+ * error in SSR.
+ *
+ * The one thing a guest actually needs to know here is whether their order went
+ * through, because the honest answer decides what they do next. We can't tell
+ * from this page — the failure could have come before or after the order was
+ * written — so it says exactly that and points at the only reliable check.
+ * Telling them "it failed, try again" would be a guess that risks a double
+ * order and a double charge.
+ *
+ * `Astro.props.error` is available here but deliberately not rendered: stack
+ * traces belong in the Vercel logs, not on a guest's phone. Astro has already
+ * logged it by the time this renders.
+ */
+import ErrorPage from "../components/ErrorPage.astro";
+
+export const prerender = false;
+
+// Not shown to the visitor — this keeps the cause in the function logs next to
+// the request that produced it, where it can be matched to a timestamp.
+const { error } = Astro.props as { error?: unknown };
+if (error) console.error("[500]", Astro.url.pathname, error);
+---
+
+<ErrorPage
+  code={500}
+  tone="alert"
+  title="Something went wrong on our side"
+  pathname={Astro.url.pathname}
+>
+  <p>
+    This one's us, not you. It's already been logged.
+  </p>
+  <p>
+    <strong>If you were placing an order, don't send it again yet</strong> — it
+    may have gone through. Check "Your orders" below, or ask a server, before
+    reordering.
+  </p>
+</ErrorPage>

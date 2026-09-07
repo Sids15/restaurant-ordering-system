@@ -1,0 +1,195 @@
+---
+/**
+ * ErrorPage — the shared frame for 404 and 500.
+ *
+ * Two audiences hit these, and they need different things. A guest is sitting
+ * at a table mid-meal with a phone in their hand: they need to know whether
+ * their order went through and how to reach a human. Staff are mid-service:
+ * they need the fastest route back to the station they were working. So the
+ * page picks its exits from the path that failed rather than offering one
+ * generic "go home" for both.
+ *
+ * The status code is present but demoted — "404" means nothing to someone
+ * trying to order dinner, so the plain-language line leads and the number sits
+ * underneath it as the technical detail it is.
+ */
+import AppLayout from "../layouts/AppLayout.astro";
+import { brand } from "../data/brand";
+import "../styles/global.css";
+
+interface Props {
+  code: number;
+  /** The plain-language headline. Says what happened, not what HTTP thinks. */
+  title: string;
+  /** Astro.url.pathname — decides whether the exits are staff or guest. */
+  pathname: string;
+  tone?: "neutral" | "alert";
+}
+const { code, title, pathname, tone = "neutral" } = Astro.props;
+
+// Back-of-house paths get back-of-house exits. Anything else is a guest.
+const BACK_OF_HOUSE = ["/staff", "/kitchen", "/admin"];
+const isStaff = BACK_OF_HOUSE.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+const exits = isStaff
+  ? [
+      { href: "/staff", label: "Order desk", primary: true },
+      { href: "/kitchen", label: "Kitchen board" },
+      { href: "/staff/tabs", label: "Open tabs" },
+    ]
+  : [
+      { href: "/menu", label: "Back to the menu", primary: true },
+      { href: "/orders", label: "Your orders" },
+    ];
+---
+
+<AppLayout title={`${title} — ${brand.name}`}>
+  <main class="err" data-tone={tone}>
+    <div class="err__inner">
+      <h1 class="err__title">{title}</h1>
+
+      <div class="err__body">
+        <slot />
+      </div>
+
+      <nav class="err__exits" aria-label="Where to go next">
+        {
+          exits.map((e) => (
+            <a class:list={["err__exit", e.primary && "err__exit--primary"]} href={e.href}>
+              {e.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      {
+        !isStaff && (
+          <p class="err__help">
+            Still stuck? Ask a server, or call us on{" "}
+            <a href={brand.contact.phoneHref}>{brand.contact.phoneDisplay}</a>.
+          </p>
+        )
+      }
+
+      <p class="err__code">
+        <span class="err__code-label">Error</span>
+        <span class="err__code-n">{code}</span>
+      </p>
+    </div>
+  </main>
+</AppLayout>
+
+<style>
+  .err {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    padding: var(--space-40) var(--gutter);
+  }
+  .err__inner {
+    width: 100%;
+    max-width: 32rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* A rule in the accent, then the headline. The mark carries the tone so the
+     page reads as calm or as a warning before a word is read. */
+  .err__inner::before {
+    content: "";
+    width: 3rem;
+    height: 3px;
+    background: var(--accent);
+    margin-block-end: var(--space-24);
+  }
+  .err[data-tone="alert"] .err__inner::before {
+    background: var(--danger);
+  }
+
+  .err__title {
+    text-wrap: balance;
+  }
+
+  .err__body {
+    margin-block-start: var(--space-16);
+    color: var(--ink-muted);
+    line-height: var(--lh-body);
+  }
+  .err__body :global(p + p) {
+    margin-block-start: var(--space-12);
+  }
+  .err__body :global(strong) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .err__exits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-12);
+    margin-block-start: var(--space-32);
+  }
+  .err__exit {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding-inline: var(--space-24);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+  .err__exit:hover {
+    color: var(--ink);
+    border-color: var(--ink-muted);
+  }
+  .err__exit--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .err__exit--primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--on-accent);
+  }
+
+  .err__help {
+    margin-block-start: var(--space-24);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .err__help a {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .err__code {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-8);
+    margin-block-start: var(--space-40);
+    padding-block-start: var(--space-16);
+    border-top: 1px solid var(--border);
+    width: 100%;
+  }
+  .err__code-label,
+  .err__code-n {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .err__code-n {
+    font-variant-numeric: tabular-nums;
+  }
+</style>
