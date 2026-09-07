@@ -13,6 +13,9 @@ export const brand = {
   radius: "medium" as "sharp" | "medium" | "soft",
   /** Currency label; formatINR handling lives in lib/money. */
   currency: "INR",
+  /** IANA zone the restaurant trades in. Serverless functions run in UTC, so
+   *  every "today" in the app is resolved against this, not the server clock. */
+  timezone: "Asia/Kolkata",
   contact: {
     phoneDisplay: "+91 78801 56565",
     phoneHref: "tel:+917880156565",

@@ -20,6 +20,8 @@ export function allowedRoles(pathname: string): Role[] | null {
   if (pathname === "/staff/tables" || pathname.startsWith("/staff/tables/")) {
     return ["manager"];
   }
+  // The day's takings, orders and tabs — a manager's overview of the shift.
+  if (pathname === "/staff/today") return ["manager"];
   if (pathname === "/staff" || pathname.startsWith("/staff/")) {
     return ["server", "manager"];
   }

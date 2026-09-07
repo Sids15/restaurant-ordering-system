@@ -1,0 +1,326 @@
+---
+/**
+ * Today — the manager's view of a trading day: what was taken, which tabs are
+ * still open, and which closed. Manager only (lib/auth/access.ts).
+ *
+ * `?date=YYYY-MM-DD` looks at another day; the boundary is resolved in the
+ * restaurant's timezone, not the server's (lib/orders/day.ts).
+ */
+import AppLayout from "../../layouts/AppLayout.astro";
+import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
+import { dayRange, dayLabel, localDateKey } from "../../lib/orders/day";
+import { getDaySummary } from "../../lib/orders/manager";
+import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
+import "../../styles/staff.css";
+
+export const prerender = false;
+
+const { supabase, profile } = Astro.locals;
+if (profile!.role !== "manager") return Astro.redirect("/staff", 302);
+
+const range = dayRange(Astro.url.searchParams.get("date") ?? undefined);
+const day = await getDaySummary(supabase, range);
+const label = dayLabel(range.key);
+
+const today = localDateKey();
+const shift = (days: number): string => {
+  const [y, m, d] = range.key.split("-").map(Number);
+  const at = new Date(Date.UTC(y, m - 1, d + days, 12));
+  return at.toISOString().slice(0, 10);
+};
+const prevKey = shift(-1);
+const nextKey = shift(1);
+const atToday = range.key === today;
+
+function clock(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-IN", {
+    timeZone: brand.timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+---
+
+<AppLayout title={`Today — ${brand.name}`}>
+  <StationShell
+    role={profile!.role}
+    name={profile!.name}
+    pathname={Astro.url.pathname}
+    counts={{ "/staff/today": day.openTabs.length }}
+  >
+    <StationMasthead title={label}>
+      <div class="daynav" slot="actions">
+        <a class="daynav__step" href={`/staff/today?date=${prevKey}`} rel="prev">
+          <span aria-hidden="true">←</span>
+          <span class="visually-hidden">Previous day</span>
+        </a>
+        {!atToday && <a class="daynav__today" href="/staff/today">Today</a>}
+        <a
+          class="daynav__step"
+          href={atToday ? undefined : `/staff/today?date=${nextKey}`}
+          aria-disabled={atToday ? "true" : undefined}
+          rel="next"
+        >
+          <span aria-hidden="true">→</span>
+          <span class="visually-hidden">Next day</span>
+        </a>
+      </div>
+    </StationMasthead>
+
+    {/* The shift in one line. Takings lead because it is the number a manager
+        opens this page for; everything else qualifies it. */}
+    <section class="tally st-rise" aria-label="Day summary">
+      <div class="tally__cell tally__cell--lead">
+        <p class="tally__label">Takings</p>
+        <p class="tally__value">{formatINR(day.totals.takings)}</p>
+      </div>
+      <div class="tally__cell">
+        <p class="tally__label">Orders</p>
+        <p class="tally__value">
+          {day.totals.orderCount}
+          {day.totals.cancelledCount > 0 && (
+            <span class="tally__sub">{day.totals.cancelledCount} cancelled</span>
+          )}
+        </p>
+      </div>
+      <div class="tally__cell">
+        <p class="tally__label">Open tabs</p>
+        <p class="tally__value">
+          {day.openTabs.length}
+          {day.totals.openValue > 0 && (
+            <span class="tally__sub">{formatINR(day.totals.openValue)} unbilled</span>
+          )}
+        </p>
+      </div>
+      <div class="tally__cell">
+        <p class="tally__label">Closed</p>
+        <p class="tally__value">
+          {day.closedTabs.length}
+          {day.totals.closedValue > 0 && (
+            <span class="tally__sub">{formatINR(day.totals.closedValue)}</span>
+          )}
+        </p>
+      </div>
+    </section>
+
+    <section class="st-rise-2" aria-labelledby="tabs-h">
+      <h2 class="sec__title" id="tabs-h">Tabs</h2>
+      {day.openTabs.length === 0 && day.closedTabs.length === 0 ? (
+        <p class="st-empty">No tabs opened on this day.</p>
+      ) : (
+        <ul class="rows">
+          {day.openTabs.map((t) => (
+            <li class="row">
+              <a class="row__main" href={`/staff/tabs/${t.id}`}>
+                <span class="row__title">Table {t.table_label}</span>
+                <span class="row__meta">
+                  Opened {clock(t.opened_at)} · {t.order_count}{" "}
+                  {t.order_count === 1 ? "round" : "rounds"}
+                </span>
+              </a>
+              <span class="row__amount">{formatINR(t.subtotal)}</span>
+              <span class="tag tag--open">Open</span>
+            </li>
+          ))}
+          {day.closedTabs.map((t) => (
+            <li class="row">
+              <a class="row__main" href={`/staff/tabs/${t.id}`}>
+                <span class="row__title">Table {t.table_label}</span>
+                <span class="row__meta">
+                  {clock(t.opened_at)}–{t.closed_at ? clock(t.closed_at) : "—"} ·{" "}
+                  {t.order_count} {t.order_count === 1 ? "round" : "rounds"}
+                </span>
+              </a>
+              <span class="row__amount">{formatINR(t.subtotal)}</span>
+              <span class="tag">Closed</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="st-rise-2" aria-labelledby="orders-h">
+      <h2 class="sec__title" id="orders-h">Orders</h2>
+      {day.orders.length === 0 ? (
+        <p class="st-empty">No orders on this day.</p>
+      ) : (
+        <ul class="rows">
+          {day.orders.map((o) => (
+            <li class={`row ${o.status === "cancelled" ? "row--void" : ""}`}>
+              <a class="row__main" href={`/staff?code=${o.code}`}>
+                <span class="row__title">{o.code}</span>
+                <span class="row__meta">
+                  {clock(o.created_at)} ·{" "}
+                  {o.table_label ? `Table ${o.table_label}` : "No table"} ·{" "}
+                  {o.source === "customer" ? "Guest" : "Server"}
+                </span>
+              </a>
+              <span class="row__amount">{formatINR(o.subtotal)}</span>
+              <span class={`tag tag--${o.status}`}>{o.status}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  </StationShell>
+</AppLayout>
+
+<style>
+  .daynav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+  .daynav__step,
+  .daynav__today {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding-inline: var(--space-12);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    color: var(--ink-muted);
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .daynav__step:hover,
+  .daynav__today:hover {
+    color: var(--ink);
+    border-color: var(--ink-muted);
+  }
+  .daynav__step[aria-disabled="true"] {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* Summary strip. Takings gets the display face and twice the size — it is the
+     one figure worth reading from across a desk. */
+  .tally {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--space-16);
+    padding: var(--space-24);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .tally__label {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .tally__value {
+    margin-block-start: var(--space-4);
+    font-size: var(--fs-heading-s);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .tally__cell--lead .tally__value {
+    font-family: var(--font-display);
+    font-size: var(--fs-heading-l);
+    font-weight: 400;
+    line-height: var(--lh-heading);
+  }
+  .tally__sub {
+    display: block;
+    margin-block-start: 2px;
+    font-family: var(--font-ui);
+    font-size: var(--fs-caption);
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .sec__title {
+    margin-block-end: var(--space-12);
+    font-family: var(--font-display);
+    font-size: var(--fs-heading-s);
+    color: var(--ink);
+  }
+
+  .rows {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-16);
+    min-height: 3.5rem;
+    padding: var(--space-8) var(--space-16);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .row:last-child {
+    border-bottom: 0;
+  }
+  .row__main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .row__title {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .row__meta {
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .row__amount {
+    flex: 0 0 auto;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .row--void .row__title,
+  .row--void .row__amount {
+    color: var(--ink-muted);
+    text-decoration: line-through;
+  }
+
+  .tag {
+    flex: 0 0 auto;
+    min-width: 5rem;
+    padding: 2px var(--space-8);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--ink-muted);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .tag--open {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .tag--cancelled {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  @media (max-width: 40rem) {
+    .row {
+      flex-wrap: wrap;
+    }
+    .row__main {
+      flex-basis: 100%;
+    }
+  }
+</style>
