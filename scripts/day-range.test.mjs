@@ -37,5 +37,37 @@ chk("London spring-forward day is 23h", (r.end-r.start)/3600000, 23);
 r = dayRange("2026-10-25","Europe/London");   // clocks go back -> 25h day
 chk("London fall-back day is 25h", (r.end-r.start)/3600000, 25);
 
+
+// --- Which open tabs belong to the day being viewed -------------------------
+// The bug this guards: the open-tab read had no date filter, so tonight's live
+// tables appeared inside every past day. A quiet Thursday in September showed
+// two open tabs and 840 unbilled sitting next to "No orders on this day".
+// Mirrors getDaySummary: today carries stragglers, a past day does not.
+function openTabsFor({ isToday, from, to }, tabs) {
+  return tabs.filter((t) => isToday || (t.opened >= from && t.opened < to));
+}
+const d3 = dayRange("2026-09-03", "Asia/Kolkata");
+const tabs = [
+  { name: "opened on the 3rd", opened: new Date("2026-09-03T04:00:00.000Z") }, // 09:30 IST
+  { name: "opened tonight",    opened: new Date("2026-09-07T18:00:00.000Z") },
+];
+const past = openTabsFor({ isToday: false, from: d3.start, to: d3.end }, tabs);
+chk("past day keeps its own open tab", past.length, 1);
+chk("past day excludes tonight's", past.some((t) => t.name === "opened tonight"), false);
+
+const todayView = openTabsFor({ isToday: true }, tabs);
+chk("today carries everything still open", todayView.length, 2);
+
+// A tab that opened before today is flagged so its row can show a date; a bare
+// time would read as this morning.
+const carried = (opened, dayStart) => new Date(opened) < dayStart;
+const start7 = dayRange("2026-09-07", "Asia/Kolkata").start;
+// 6 Sept 15:00 IST — a genuine carry-over from yesterday's service.
+chk("yesterday's tab is marked carried", carried("2026-09-06T09:30:00.000Z", start7), true);
+// 7 Sept 01:30 IST. Late enough to feel like "last night", but it IS today in
+// Kolkata, so it must not be flagged — the same boundary the takings use.
+chk("a 01:30 tab is today, not carried", carried("2026-09-06T20:00:00.000Z", start7), false);
+chk("a mid-morning tab is not carried", carried("2026-09-07T05:00:00.000Z", start7), false);
+
 console.log(fail ? `\n${fail} FAILED` : "\nall passed");
 process.exit(fail?1:0);

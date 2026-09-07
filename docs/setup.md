@@ -17,13 +17,39 @@ In the Supabase dashboard → **SQL Editor**, run in order:
 
 ## 3. Create staff accounts
 - Dashboard → **Authentication → Users → Add user** (email + password) for each
-  staff member. A `profiles` row is created automatically (default role
-  `server`).
-- Set roles in **SQL Editor**, e.g.:
+  staff member. Tick **Auto Confirm User** so they can sign in straight away.
+  A `profiles` row is created automatically with role **`pending`**.
+- `pending` is not a working role: the account exists but can't open any staff
+  page and can't read orders or tabs (see `007_role_lockdown.sql`). Promote it
+  in **SQL Editor** — by email, so you never have to copy a uuid:
   ```sql
-  update profiles set role = 'manager', name = 'Owner'   where id = 'USER_UUID';
-  update profiles set role = 'kitchen', name = 'Kitchen'  where id = 'USER_UUID';
+  update profiles set role = 'manager', name = 'Owner'
+   where id = (select id from auth.users where email = 'owner@example.com');
+
+  update profiles set role = 'kitchen', name = 'Kitchen'
+   where id = (select id from auth.users where email = 'kitchen@example.com');
+
+  update profiles set role = 'server', name = 'Priya'
+   where id = (select id from auth.users where email = 'priya@example.com');
   ```
+- Check what you've got:
+  ```sql
+  select u.email, p.name, p.role
+    from profiles p join auth.users u on u.id = p.id
+   order by p.role;
+  ```
+
+### What each role can open
+| | manager | server | kitchen |
+|---|---|---|---|
+| Order desk `/staff`, Build order, Open tabs | ✅ | ✅ | — |
+| Kitchen board `/kitchen` | ✅ | — | ✅ |
+| Menu manager `/admin` | ✅ | — | — |
+| Table QR codes `/staff/tables` | ✅ | — | — |
+| Today `/staff/today` | ✅ | — | — |
+
+Sign in at **`/staff/login`**. There is no self-serve signup on purpose: a
+public one would let anyone provision themselves a working staff role.
 
 ## 4. Configure env
 ```bash

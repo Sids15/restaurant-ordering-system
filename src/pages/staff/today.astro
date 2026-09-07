@@ -42,6 +42,18 @@ function clock(iso: string): string {
     minute: "2-digit",
   });
 }
+
+/** "3 Sept, 01:36" — for a tab that opened on an earlier day, where a bare
+ *  time would read as this morning. */
+function stamp(iso: string): string {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("en-IN", {
+    timeZone: brand.timezone,
+    day: "numeric",
+    month: "short",
+  });
+  return `${day}, ${clock(iso)}`;
+}
 ---
 
 <AppLayout title={`Today — ${brand.name}`}>
@@ -117,7 +129,9 @@ function clock(iso: string): string {
               <a class="row__main" href={`/staff/tabs/${t.id}`}>
                 <span class="row__title">Table {t.table_label}</span>
                 <span class="row__meta">
-                  Opened {clock(t.opened_at)} · {t.order_count}{" "}
+                  {t.carried
+                    ? `Open since ${stamp(t.opened_at)}`
+                    : `Opened ${clock(t.opened_at)}`} · {t.order_count}{" "}
                   {t.order_count === 1 ? "round" : "rounds"}
                   {t.assigned && <> · {assigneeName(t.assigned)}</>}
                 </span>

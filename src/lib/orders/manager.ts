@@ -7,7 +7,7 @@
  * manager can see it happened, but never in a figure.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DayRange } from "./day";
+import { localDateKey, type DayRange } from "./day";
 import type { TabStatus } from "../types";
 import { ASSIGNED_EMBED, selectTabs, type Assignee } from "./assign";
 
@@ -30,12 +30,22 @@ export interface DayTab {
   subtotal: number;
   /** The server who worked this table, or null. */
   assigned: Assignee | null;
+  /** Opened before the day being viewed — a sitting carried over, not a new
+   *  one. Only ever true on today, and only for tabs still open. */
+  carried: boolean;
 }
 
 export interface DaySummary {
   orders: DayOrder[];
-  /** Currently open, whenever they were opened — an overnight tab still needs
-   *  chasing, so it belongs here even if it started yesterday. */
+  /**
+   * Open tabs belonging to this day: the ones opened during it. On today that
+   * also includes anything still open from an earlier day (flagged `carried`),
+   * because a tab nobody closed is live work no matter when it started.
+   *
+   * On a PAST day it must not: an unfiltered "currently open" read put tonight's
+   * live tables into every historical day, so a quiet Thursday in September
+   * showed two open tabs and 840 unbilled next to "No orders on this day".
+   */
   openTabs: DayTab[];
   /** Tabs closed within the day. */
   closedTabs: DayTab[];
@@ -58,10 +68,12 @@ const tabColumns = (withAssignment: boolean) =>
   (withAssignment ? `${ASSIGNED_EMBED}, ` : "") +
   "orders ( subtotal, status )";
 
-function tabRow(t: Record<string, unknown>): DayTab {
+function tabRow(t: Record<string, unknown>, dayStart?: Date): DayTab {
   const rounds = (t.orders as { subtotal: number; status: string }[] | null) ?? [];
   const billable = rounds.filter((o) => COUNTS_AS_MONEY(o.status));
+  const openedAt = t.opened_at as string;
   return {
+    carried: dayStart ? new Date(openedAt) < dayStart : false,
     id: t.id as string,
     table_label: t.table_label as string,
     status: t.status as TabStatus,
@@ -80,6 +92,10 @@ export async function getDaySummary(
   const from = range.start.toISOString();
   const to = range.end.toISOString();
 
+  // Today carries yesterday's stragglers; a past day is closed and shows only
+  // what it actually held.
+  const isToday = range.key === localDateKey();
+
   const [ordersRes, openRes, closedRes] = await Promise.all([
     supabase
       .from("orders")
@@ -87,13 +103,13 @@ export async function getDaySummary(
       .gte("created_at", from)
       .lt("created_at", to)
       .order("created_at", { ascending: false }),
-    selectTabs<Record<string, unknown>[]>((a) =>
-      supabase
-        .from("tabs")
-        .select(tabColumns(a))
-        .eq("status", "open")
-        .order("opened_at", { ascending: true }),
-    ),
+    selectTabs<Record<string, unknown>[]>((a) => {
+      const q = supabase.from("tabs").select(tabColumns(a)).eq("status", "open");
+      return (isToday ? q : q.gte("opened_at", from).lt("opened_at", to)).order(
+        "opened_at",
+        { ascending: true },
+      );
+    }),
     selectTabs<Record<string, unknown>[]>((a) =>
       supabase
         .from("tabs")
@@ -114,8 +130,8 @@ export async function getDaySummary(
     created_at: o.created_at as string,
   }));
 
-  const openTabs = (openRes.data ?? []).map(tabRow);
-  const closedTabs = (closedRes.data ?? []).map(tabRow);
+  const openTabs = (openRes.data ?? []).map((t) => tabRow(t, range.start));
+  const closedTabs = (closedRes.data ?? []).map((t) => tabRow(t));
   const billable = orders.filter((o) => COUNTS_AS_MONEY(o.status));
 
   return {
