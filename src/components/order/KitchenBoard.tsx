@@ -32,6 +32,22 @@ const POLL_MS = 4000;
  * could be sitting in it when this ships. Each column therefore matches a LIST
  * of statuses and New absorbs `preparing`, so an in-flight ticket can't drop off
  * the board and become impossible to complete. */
+/** "224m" is unreadable as elapsed time; a cook parses "3h 44m" instantly. */
+function waited(min: number): string {
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+/** How hard the wait should shout. The clock is the board's only urgency
+ *  signal, so it earns colour rather than sitting in grey with everything else. */
+function urgency(min: number): "ok" | "warn" | "late" {
+  if (min >= 20) return "late";
+  if (min >= 10) return "warn";
+  return "ok";
+}
+
 const COLUMNS: { key: string; label: string; statuses: string[] }[] = [
   { key: "confirmed", label: "New", statuses: ["confirmed", "preparing"] },
   { key: "ready", label: "Ready", statuses: ["ready"] },
@@ -112,9 +128,14 @@ export default function KitchenBoard({
                 {colOrders.map((o) => (
                   <article key={o.code} className={`ticket ticket--${o.status}`}>
                     <div className="ticket__top">
-                      <span className="ticket__code">{o.code}</span>
-                      <span className="ticket__meta">
-                        {o.table_label ? `Table ${o.table_label}` : "No table"} · {o.waited_min}m
+                      <span className="ticket__ident">
+                        <span className="ticket__table">
+                          {o.table_label ? `Table ${o.table_label}` : "No table"}
+                        </span>
+                        <span className="ticket__code">{o.code}</span>
+                      </span>
+                      <span className="ticket__wait" data-urgency={urgency(o.waited_min)}>
+                        {waited(o.waited_min)}
                       </span>
                     </div>
                     <ul className="ticket__items">
