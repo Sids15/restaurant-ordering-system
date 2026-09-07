@@ -385,8 +385,17 @@ function when(iso: string): string {
   .actions__confirm {
     min-width: 15rem;
   }
+  /* The status line pushes whatever follows it to the far edge, so the lone
+     Cancel sits flush right — matching the status pill in the header and the
+     amount on the subtotal row. It used to be flex: 1 1 12rem, but the global
+     `p { max-width: var(--measure) }` capped its growth at 34rem, which left
+     the button stranded mid-row on a wide card.
+     Only the confirmed state has this line; in the pending state Confirm and
+     Cancel stay grouped together on the left, as a pair should. */
   .actions__done {
-    flex: 1 1 12rem;
+    flex: 0 1 auto;
+    max-width: none;
+    margin-inline-end: auto;
     font-size: var(--fs-caption);
     color: var(--ink-muted);
   }
@@ -406,6 +415,16 @@ function when(iso: string): string {
     }
     .actions__confirm {
       min-width: 0;
+    }
+    /* Stacked, so the auto margin has nothing to push against. */
+    .actions__done {
+      margin-inline-end: 0;
+    }
+    .actions form {
+      width: 100%;
+    }
+    .actions .st-btn {
+      width: 100%;
     }
   }
 </style>
