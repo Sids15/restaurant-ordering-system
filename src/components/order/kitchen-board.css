@@ -1,9 +1,7 @@
 /* =============================================================================
-   KitchenBoard — the live order queue. Orders group into columns by status
-   (Confirmed → Preparing → Ready) so the kitchen can see the whole flow at a
-   glance; each ticket carries its status's --status-* accent. One action per
-   ticket — Complete — sized as a big touch target for a busy line. Consumes
-   design tokens only.
+   KitchenBoard — the live order queue: one list of active tickets, oldest
+   first, flowing across the available width. One action per ticket — Complete
+   — sized as a touch target for a busy line. Consumes design tokens only.
    ========================================================================== */
 
 .board__empty {
@@ -12,34 +10,21 @@
   color: var(--ink-muted);
 }
 
-.board__cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: var(--space-24);
-  align-items: start;
-}
-
-/* --- Column ----------------------------------------------------------------- */
-.board__col {
+/* One queue. Tickets flow across the width instead of stacking in a narrow
+   column, so a tablet propped on the pass shows three at once. */
+.board {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
-  min-width: 0;
 }
-.board__col-head {
+.board__head {
   display: flex;
   align-items: center;
   gap: var(--space-8);
   padding-block-end: var(--space-12);
   border-bottom: 2px solid var(--border);
 }
-.board__col-head[data-status="confirmed"] {
-  border-bottom-color: var(--status-confirmed);
-}
-.board__col-head[data-status="ready"] {
-  border-bottom-color: var(--status-ready);
-}
-.board__col-label {
+.board__label {
   font-family: var(--font-ui);
   font-size: var(--fs-caption);
   font-weight: 700;
@@ -47,36 +32,22 @@
   text-transform: uppercase;
   color: var(--ink);
 }
-.board__col-count {
-  display: inline-grid;
-  place-items: center;
+.board__count {
   min-width: 1.5rem;
-  height: 1.5rem;
-  padding-inline: var(--space-4);
+  padding-inline: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: var(--fs-caption);
   font-weight: 700;
+  text-align: center;
   font-variant-numeric: tabular-nums;
-  color: var(--on-accent);
-  background: var(--ink-muted);
-  border-radius: var(--radius-pill);
 }
-.board__col-head[data-status="confirmed"] .board__col-count {
-  background: var(--status-confirmed);
-}
-.board__col-head[data-status="ready"] .board__col-count {
-  background: var(--status-ready);
-}
-.board__col-empty {
-  padding: var(--space-16);
-  font-size: var(--fs-caption);
-  color: var(--ink-muted);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-}
-.board__col-list {
-  display: flex;
-  flex-direction: column;
+.board__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
   gap: var(--space-16);
+  align-items: start;
 }
 
 /* --- Ticket ------------------------------------------------------------------ */
@@ -94,14 +65,14 @@
 .ticket--confirmed {
   border-inline-start-color: var(--status-confirmed);
 }
-/* Retired status: a leftover ticket rides in the New column, so it wears New's
-   colour rather than announcing a stage that no longer exists. */
+/* Retired statuses. Tickets left in them by an earlier deploy still render, so
+   they wear the same colour as a live one rather than flagging a stage that no
+   longer exists. */
 .ticket--preparing {
   border-inline-start-color: var(--status-confirmed);
 }
 .ticket--ready {
-  border-inline-start-color: var(--status-ready);
-  background: var(--status-ready-soft);
+  border-inline-start-color: var(--status-confirmed);
 }
 .ticket__top {
   display: flex;
@@ -219,10 +190,8 @@
     border-color var(--dur-fast) var(--ease-out);
 }
 .ticket__slip:hover {
-  border-color: var(--ink-muted);
-}
-.ticket__slip:hover {
   color: var(--ink);
+  border-color: var(--ink-muted);
 }
 .ticket__advance {
   flex: 0 0 auto;
@@ -251,7 +220,7 @@
 
 /* --- Phones: single column ----------------------------------------------- */
 @media (max-width: 30rem) {
-  .board__cols {
+  .board__list {
     grid-template-columns: 1fr;
   }
 }

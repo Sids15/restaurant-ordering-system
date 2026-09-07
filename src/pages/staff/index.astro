@@ -53,7 +53,12 @@ function when(iso: string): string {
 ---
 
 <AppLayout title={`Staff console — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+  <StationShell
+    role={profile!.role}
+    name={profile!.name}
+    pathname={Astro.url.pathname}
+    counts={{ "/staff": pending.length }}
+  >
     <StationMasthead title="Order desk">
       {/* Stations and identity live in the sidebar now. What stays here is the
           desk's own primary action — the thing you came to this page to do. */}

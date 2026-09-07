@@ -24,14 +24,15 @@ interface KitchenOrderData {
 
 const POLL_MS = 4000;
 
-/** Board columns, left to right. Purely a display grouping over `order.status`;
- * the data and the single-step complete() action are unchanged.
+/* The board is one queue, not a set of columns. `complete()` sends a ticket
+ * straight to `served`, so nothing ever entered Preparing or Ready — both
+ * columns sat permanently empty, and an always-empty column is a label eating
+ * half the screen. Tickets render oldest-first (the query orders by
+ * confirmed_at), which is the order a kitchen actually works in.
  *
- * "Preparing" was retired as a workflow step — the kitchen goes New → Ready in
- * one tap. The status still exists in the Postgres enum, though, so a ticket
- * could be sitting in it when this ships. Each column therefore matches a LIST
- * of statuses and New absorbs `preparing`, so an in-flight ticket can't drop off
- * the board and become impossible to complete. */
+ * Every ACTIVE_STATUSES value still renders, so a ticket left in `preparing` or
+ * `ready` by an earlier deploy stays visible and completable. */
+
 /** "224m" is unreadable as elapsed time; a cook parses "3h 44m" instantly. */
 function waited(min: number): string {
   if (min < 60) return `${min}m`;
@@ -47,11 +48,6 @@ function urgency(min: number): "ok" | "warn" | "late" {
   if (min >= 10) return "warn";
   return "ok";
 }
-
-const COLUMNS: { key: string; label: string; statuses: string[] }[] = [
-  { key: "confirmed", label: "New", statuses: ["confirmed", "preparing"] },
-  { key: "ready", label: "Ready", statuses: ["ready"] },
-];
 
 export default function KitchenBoard({
   initialOrders,
@@ -112,20 +108,13 @@ export default function KitchenBoard({
   }
 
   return (
-    <div className="board__cols">
-      {COLUMNS.map((col) => {
-        const colOrders = orders.filter((o) => col.statuses.includes(o.status));
-        return (
-          <div key={col.key} className="board__col">
-            <div className="board__col-head" data-status={col.key}>
-              <span className="board__col-label">{col.label}</span>
-              <span className="board__col-count">{colOrders.length}</span>
-            </div>
-            {colOrders.length === 0 ? (
-              <p className="board__col-empty">No tickets.</p>
-            ) : (
-              <div className="board__col-list">
-                {colOrders.map((o) => (
+    <section className="board">
+      <div className="board__head">
+        <span className="board__label">In the pass</span>
+        <span className="board__count">{orders.length}</span>
+      </div>
+      <div className="board__list">
+        {orders.map((o) => (
                   <article key={o.code} className={`ticket ticket--${o.status}`}>
                     <div className="ticket__top">
                       <span className="ticket__ident">
@@ -164,12 +153,8 @@ export default function KitchenBoard({
                       )}
                     </div>
                   </article>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </section>
   );
 }

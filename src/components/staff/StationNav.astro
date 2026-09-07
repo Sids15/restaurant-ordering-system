@@ -18,8 +18,10 @@ interface Props {
   name: string;
   /** Astro.url.pathname — used to mark the current station. */
   pathname: string;
+  /** Live counts per href, e.g. { "/kitchen": 3 }. Zero and missing both hide. */
+  counts?: Record<string, number>;
 }
-const { role, name, pathname } = Astro.props;
+const { role, name, pathname, counts = {} } = Astro.props;
 
 // Filtered through the same roleCanAccess() the middleware enforces with, so
 // the rail can never offer a station that bounces you back to the login page.
@@ -60,7 +62,13 @@ const showName = name && name.trim().toLowerCase() !== role;
           href={l.href}
           aria-current={current === l.href ? "page" : undefined}
         >
-          {l.label}
+          <span>{l.label}</span>
+          {counts[l.href] > 0 && (
+            <span class="stnav__badge">
+              {counts[l.href]}
+              <span class="visually-hidden"> waiting</span>
+            </span>
+          )}
         </a>
       ))
     }

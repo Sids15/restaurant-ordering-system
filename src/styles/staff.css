@@ -32,6 +32,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding-inline: var(--space-8);
 }
 .stnav__brand-name {
   font-family: var(--font-display);
@@ -42,19 +43,29 @@
 .stnav__brand-sub {
   font-family: var(--font-ui);
   font-size: var(--fs-label);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
   color: var(--ink-muted);
 }
 
 .stnav__links {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
+/* Touch-first: 2.75rem clears the 44px tap target a tablet needs, and the row
+   is a grid so a station's live count can sit at the end without the label
+   shifting when the number changes. */
 .stnav__link {
-  padding: var(--space-8) var(--space-12);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 2.75rem;
+  padding-inline: var(--space-12);
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
-  font-size: var(--fs-caption);
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--ink-muted);
   transition:
@@ -66,12 +77,33 @@
   background: var(--surface);
 }
 /* Driven off aria-current so the marker and the assistive-tech state can't
-   drift apart. */
+   drift apart. A filled row rather than an inset hairline: the hairline read
+   as a stray border, and at a glance across a room fill is what registers. */
 .stnav__link[aria-current="page"] {
-  color: var(--ink);
+  color: var(--on-accent);
   font-weight: 600;
-  background: var(--surface);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--accent);
+}
+.stnav__link[aria-current="page"]:hover {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+/* Live count for a station — the rail's reason to exist beyond a link list. */
+.stnav__badge {
+  min-width: 1.375rem;
+  padding-inline: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  line-height: 1.375rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.stnav__link[aria-current="page"] .stnav__badge {
+  background: var(--on-accent);
+  color: var(--accent);
 }
 
 .stnav__foot {

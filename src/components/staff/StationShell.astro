@@ -12,14 +12,16 @@ interface Props {
   role: Role;
   name: string;
   pathname: string;
+  /** Live per-station counts, keyed by href — see StationNav. */
+  counts?: Record<string, number>;
   /** Station-specific modifier on the content column (e.g. "build", "tabs"). */
   variant?: string;
 }
-const { role, name, pathname, variant } = Astro.props;
+const { role, name, pathname, variant, counts } = Astro.props;
 ---
 
 <div class="stlayout">
-  <StationNav role={role} name={name} pathname={pathname} />
+  <StationNav role={role} name={name} pathname={pathname} counts={counts} />
   <main class:list={["st-shell", variant]}>
     <slot />
   </main>

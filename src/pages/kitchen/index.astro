@@ -26,7 +26,12 @@ const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
 ---
 
 <AppLayout title={`Kitchen — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+  <StationShell
+    role={profile!.role}
+    name={profile!.name}
+    pathname={Astro.url.pathname}
+    counts={{ "/kitchen": initialOrders.length }}
+  >
     <StationMasthead title="Kitchen board" />
 
     <KitchenBoard client:load initialOrders={initialOrders} canComplete={profile!.role === "kitchen"} />

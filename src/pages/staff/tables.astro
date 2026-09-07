@@ -20,7 +20,9 @@ import "../../styles/table-qr.css";
 export const prerender = false;
 
 const { profile } = Astro.locals;
-if (profile!.role !== "manager" && profile!.role !== "server") {
+// Manager only — middleware enforces this too (lib/auth/access.ts); the check
+// is repeated here so the page can't be reached if that rule ever moves.
+if (profile!.role !== "manager") {
   return Astro.redirect("/staff", 302);
 }
 

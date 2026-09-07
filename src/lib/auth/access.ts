@@ -14,6 +14,12 @@ export function allowedRoles(pathname: string): Role[] | null {
     return ["kitchen", "manager"];
   }
   if (pathname === "/staff/login") return null;
+  // Table QR codes are printed once and last: a wrong or forged sheet is a
+  // physical problem to undo. Provisioning the floor is a manager decision,
+  // so this sits above the general /staff rule.
+  if (pathname === "/staff/tables" || pathname.startsWith("/staff/tables/")) {
+    return ["manager"];
+  }
   if (pathname === "/staff" || pathname.startsWith("/staff/")) {
     return ["server", "manager"];
   }
