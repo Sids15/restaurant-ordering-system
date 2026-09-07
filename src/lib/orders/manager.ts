@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DayRange } from "./day";
 import type { TabStatus } from "../types";
+import { ASSIGNED_EMBED, selectTabs, type Assignee } from "./assign";
 
 export interface DayOrder {
   code: string;
@@ -27,6 +28,8 @@ export interface DayTab {
   closed_at: string | null;
   order_count: number;
   subtotal: number;
+  /** The server who worked this table, or null. */
+  assigned: Assignee | null;
 }
 
 export interface DaySummary {
@@ -48,6 +51,13 @@ export interface DaySummary {
 
 const COUNTS_AS_MONEY = (status: string) => status !== "cancelled";
 
+// Shared by the open and closed tab reads. The assignment embed drops out when
+// 008_tab_assignment.sql hasn't been applied yet — see selectTabs().
+const tabColumns = (withAssignment: boolean) =>
+  "id, table_label, status, opened_at, closed_at, " +
+  (withAssignment ? `${ASSIGNED_EMBED}, ` : "") +
+  "orders ( subtotal, status )";
+
 function tabRow(t: Record<string, unknown>): DayTab {
   const rounds = (t.orders as { subtotal: number; status: string }[] | null) ?? [];
   const billable = rounds.filter((o) => COUNTS_AS_MONEY(o.status));
@@ -57,6 +67,7 @@ function tabRow(t: Record<string, unknown>): DayTab {
     status: t.status as TabStatus,
     opened_at: t.opened_at as string,
     closed_at: (t.closed_at as string | null) ?? null,
+    assigned: (t.assigned as Assignee | null) ?? null,
     order_count: billable.length,
     subtotal: billable.reduce((s, o) => s + Number(o.subtotal), 0),
   };
@@ -76,18 +87,22 @@ export async function getDaySummary(
       .gte("created_at", from)
       .lt("created_at", to)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("tabs")
-      .select("id, table_label, status, opened_at, closed_at, orders ( subtotal, status )")
-      .eq("status", "open")
-      .order("opened_at", { ascending: true }),
-    supabase
-      .from("tabs")
-      .select("id, table_label, status, opened_at, closed_at, orders ( subtotal, status )")
-      .eq("status", "closed")
-      .gte("closed_at", from)
-      .lt("closed_at", to)
-      .order("closed_at", { ascending: false }),
+    selectTabs<Record<string, unknown>[]>((a) =>
+      supabase
+        .from("tabs")
+        .select(tabColumns(a))
+        .eq("status", "open")
+        .order("opened_at", { ascending: true }),
+    ),
+    selectTabs<Record<string, unknown>[]>((a) =>
+      supabase
+        .from("tabs")
+        .select(tabColumns(a))
+        .eq("status", "closed")
+        .gte("closed_at", from)
+        .lt("closed_at", to)
+        .order("closed_at", { ascending: false }),
+    ),
   ]);
 
   const orders: DayOrder[] = (ordersRes.data ?? []).map((o) => ({

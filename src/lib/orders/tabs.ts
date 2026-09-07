@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TabStatus } from "../types";
 import { computeBill, type BillTotals } from "../billing";
+import { ASSIGNED_EMBED, selectTabs, type Assignee } from "./assign";
 
 export interface OpenTab {
   tabId: string;
@@ -87,6 +88,8 @@ export interface OpenTabSummary {
   order_count: number;
   subtotal: number;
   opened_at: string;
+  /** The server on this table, or null — assignment is optional. */
+  assigned: Assignee | null;
 }
 
 export interface TabBillLine {
@@ -104,28 +107,36 @@ export interface TabBill {
   lines: TabBillLine[];
   round_count: number;
   totals: BillTotals;
+  /** The server on this table, or null. Printed as "Served by" on the bill. */
+  assigned: Assignee | null;
 }
 
 /** Open tabs with a running total, for the /staff/tabs list. Oldest first. */
 export async function getOpenTabs(supabase: SupabaseClient): Promise<OpenTabSummary[]> {
-  const { data, error } = await supabase
-    .from("tabs")
-    .select("id, table_label, opened_at, orders ( subtotal, status )")
-    .eq("status", "open")
-    .order("opened_at", { ascending: true });
+  const { data, error } = await selectTabs<Record<string, unknown>[]>((withAssignment) =>
+    supabase
+      .from("tabs")
+      .select(
+        "id, table_label, opened_at, orders ( subtotal, status )" +
+          (withAssignment ? `, ${ASSIGNED_EMBED}` : ""),
+      )
+      .eq("status", "open")
+      .order("opened_at", { ascending: true }),
+  );
 
   if (error || !data) return [];
 
   return data.map((t) => {
-    const billable = (t.orders ?? []).filter(
-      (o: { status: string }) => o.status !== "cancelled",
+    const billable = ((t.orders as { subtotal: number; status: string }[] | null) ?? []).filter(
+      (o) => o.status !== "cancelled",
     );
     return {
       id: t.id as string,
       table_label: t.table_label as string,
       opened_at: t.opened_at as string,
+      assigned: (t.assigned as Assignee | null) ?? null,
       order_count: billable.length,
-      subtotal: billable.reduce((s: number, o: { subtotal: number }) => s + Number(o.subtotal), 0),
+      subtotal: billable.reduce((s, o) => s + Number(o.subtotal), 0),
     };
   });
 }
@@ -138,14 +149,17 @@ export async function getTabBill(
   supabase: SupabaseClient,
   tabId: string,
 ): Promise<TabBill | null> {
-  const { data, error } = await supabase
-    .from("tabs")
-    .select(
-      "id, table_label, status, opened_at, closed_at, " +
-        "orders ( status, order_items ( name_snapshot, price_snapshot, qty ) )",
-    )
-    .eq("id", tabId)
-    .maybeSingle();
+  const { data, error } = await selectTabs<Record<string, unknown>>((withAssignment) =>
+    supabase
+      .from("tabs")
+      .select(
+        "id, table_label, status, opened_at, closed_at, " +
+          (withAssignment ? `${ASSIGNED_EMBED}, ` : "") +
+          "orders ( status, order_items ( name_snapshot, price_snapshot, qty ) )",
+      )
+      .eq("id", tabId)
+      .maybeSingle(),
+  );
 
   if (error || !data) return null;
 
@@ -175,6 +189,7 @@ export async function getTabBill(
     status: data.status as TabStatus,
     opened_at: data.opened_at as string,
     closed_at: data.closed_at as string | null,
+    assigned: (data.assigned as Assignee | null) ?? null,
     lines: [...merged.values()],
     round_count,
     totals: computeBill(subtotal),

@@ -9,6 +9,7 @@
  */
 import AppLayout from "../../../layouts/AppLayout.astro";
 import { getTabBill } from "../../../lib/orders/tabs";
+import { listAssignable, assigneeName } from "../../../lib/orders/assign";
 import { formatINR } from "../../../lib/money";
 import { SERVICE_RATE, GST_RATE } from "../../../lib/billing";
 import { brand } from "../../../data/brand";
@@ -25,10 +26,15 @@ const id = Astro.params.id ?? "";
 const bill = await getTabBill(supabase, id);
 if (!bill) Astro.response.status = 404;
 
+// The roster for the picker — only fetched while the tab is still open, since a
+// closed bill can't be reassigned.
+const roster = bill?.status === "open" ? await listAssignable(supabase) : [];
+
 const params = Astro.url.searchParams;
 const justClosed = params.get("closed") === "1";
 const justMoved = params.get("moved") === "1";
 const justMerged = params.get("merged") === "1";
+const justAssigned = params.get("assigned");
 const err = params.get("err");
 
 const pct = (r: number) => `${Math.round(r * 100)}%`;
@@ -37,7 +43,10 @@ const pct = (r: number) => `${Math.round(r * 100)}%`;
 const billNo = bill
   ? (parseInt(bill.id.replace(/-/g, "").slice(0, 8), 16) % 100000).toString().padStart(5, "0")
   : "";
-const servedBy = profile!.name?.trim() || profile!.role;
+// Whoever is on the table, falling back to whoever is printing it — an
+// unassigned tab still needs a name on the invoice.
+const servedBy =
+  assigneeName(bill?.assigned ?? null) || profile!.name?.trim() || profile!.role;
 
 function stamp(iso: string): { date: string; time: string } {
   try {
@@ -78,6 +87,23 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
 
         {bill.status === "open" && (
           <div class="ops no-print st-rise-2">
+            <form class="ops__form" method="post" action={`/api/staff/tabs/${bill.id}/assign`}>
+              <span class="ops__label">Server on this table</span>
+              <div class="ops__row">
+                <label class="st-field ops__field">
+                  <select class="st-field__input" name="to" aria-label="Server on this table">
+                    <option value="">Nobody assigned</option>
+                    {roster.map((p) => (
+                      <option value={p.id} selected={bill.assigned?.id === p.id}>
+                        {assigneeName(p)}
+                        {p.role === "manager" ? " · manager" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button class="st-btn st-btn--ghost ops__go" type="submit">Save</button>
+              </div>
+            </form>
             <form class="ops__form" method="post" action={`/api/staff/tabs/${bill.id}/move`}>
               <span class="ops__label">Move this tab to another table</span>
               <div class="ops__row">
@@ -102,6 +128,14 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
         {justClosed && <p class="st-alert st-alert--ok no-print" role="status">Tab closed — marked paid.</p>}
         {justMoved && <p class="st-alert no-print" role="status">Tab moved to Table {bill.table_label}.</p>}
         {justMerged && <p class="st-alert no-print" role="status">Tables merged — the rounds now sit on this bill.</p>}
+        {justAssigned === "1" && (
+          <p class="st-alert st-alert--ok no-print" role="status">
+            {assigneeName(bill.assigned)} is on Table {bill.table_label}.
+          </p>
+        )}
+        {justAssigned === "0" && (
+          <p class="st-alert no-print" role="status">Table {bill.table_label} is unassigned.</p>
+        )}
         {err && <p class="st-alert st-alert--error no-print" role="alert">{err}</p>}
 
         <div class="receipt-wrap st-rise-2">
@@ -203,7 +237,7 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
 
   .ops {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: var(--space-24);
     padding: var(--space-24);
     background: var(--surface-raised);
@@ -235,6 +269,19 @@ const when = bill ? stamp(bill.closed_at ?? bill.opened_at) : { date: "", time: 
     min-height: 2.75rem;
     padding-inline: var(--space-24);
     font-size: var(--fs-label);
+  }
+  /* The picker is a <select> in a .st-field meant for <input>; match the height
+     and kill the platform chrome so it sits level with Move and Merge. */
+  .ops__form select.st-field__input {
+    min-height: 2.75rem;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: right var(--space-16) center, right var(--space-12) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-inline-end: var(--space-32);
+    cursor: pointer;
   }
 
   /* --- The receipt — a clean, minimal ink-on-white slip -------------------- */

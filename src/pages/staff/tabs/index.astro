@@ -8,6 +8,7 @@ import AppLayout from "../../../layouts/AppLayout.astro";
 import StationMasthead from "../../../components/staff/StationMasthead.astro";
 import StationShell from "../../../components/staff/StationShell.astro";
 import { getOpenTabs } from "../../../lib/orders/tabs";
+import { assigneeName } from "../../../lib/orders/assign";
 import { formatINR } from "../../../lib/money";
 import { brand } from "../../../data/brand";
 import "../../../styles/staff.css";
@@ -50,6 +51,11 @@ function when(iso: string): string {
             <li class="ledger__row">
               <a class="ledger__link" href={`/staff/tabs/${t.id}`}>
                 <span class="ledger__table"><span class="ledger__word">Table</span> {t.table_label}</span>
+                {t.assigned ? (
+                  <span class="ledger__server">{assigneeName(t.assigned)}</span>
+                ) : (
+                  <span class="ledger__server ledger__server--none">Unassigned</span>
+                )}
                 <span class="ledger__meta">
                   {t.order_count} {t.order_count === 1 ? "round" : "rounds"} · since {when(t.opened_at)}
                 </span>
@@ -130,6 +136,28 @@ function when(iso: string): string {
     text-transform: uppercase;
     color: var(--ink-muted);
   }
+  /* Who's on the table. Sits beside the number because that pairing is the
+     whole point of the list; the chip is quiet enough not to compete with it. */
+  .ledger__server {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-inline-end: var(--space-16);
+    padding: var(--space-4) var(--space-12);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  .ledger__server--none {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+
   .ledger__meta {
     flex: 1 1 auto;
     font-size: var(--fs-caption);

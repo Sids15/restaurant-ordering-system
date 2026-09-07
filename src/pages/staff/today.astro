@@ -11,6 +11,7 @@ import StationMasthead from "../../components/staff/StationMasthead.astro";
 import StationShell from "../../components/staff/StationShell.astro";
 import { dayRange, dayLabel, localDateKey } from "../../lib/orders/day";
 import { getDaySummary } from "../../lib/orders/manager";
+import { assigneeName } from "../../lib/orders/assign";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
 import "../../styles/staff.css";
@@ -118,6 +119,7 @@ function clock(iso: string): string {
                 <span class="row__meta">
                   Opened {clock(t.opened_at)} · {t.order_count}{" "}
                   {t.order_count === 1 ? "round" : "rounds"}
+                  {t.assigned && <> · {assigneeName(t.assigned)}</>}
                 </span>
               </a>
               <span class="row__amount">{formatINR(t.subtotal)}</span>
@@ -131,6 +133,7 @@ function clock(iso: string): string {
                 <span class="row__meta">
                   {clock(t.opened_at)}–{t.closed_at ? clock(t.closed_at) : "—"} ·{" "}
                   {t.order_count} {t.order_count === 1 ? "round" : "rounds"}
+                  {t.assigned && <> · {assigneeName(t.assigned)}</>}
                 </span>
               </a>
               <span class="row__amount">{formatINR(t.subtotal)}</span>
