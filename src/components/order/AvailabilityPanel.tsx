@@ -6,7 +6,7 @@
  *
  * Initial state comes from props (deterministic), so SSR and hydration match.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePoll } from "./use-poll";
 import "./availability-panel.css";
 
@@ -30,6 +30,7 @@ export default function AvailabilityPanel({
 }) {
   const [menu, setMenu] = useState<Category[]>(initialMenu);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [offOnly, setOffOnly] = useState(false);
 
   usePoll(
     async () => {
@@ -75,13 +76,39 @@ export default function AvailabilityPanel({
     }
   }
 
+  // What is currently off, across every category. A cook wants this as one
+  // short list — hunting for the red rows inside a full menu is the problem.
+  const offCount = useMemo(
+    () => menu.reduce((n, c) => n + c.items.filter((i) => !i.is_available).length, 0),
+    [menu],
+  );
+
+  // Empty categories are dropped when filtering, so the list is the answer
+  // rather than a page of headings with nothing under them.
+  const shown = useMemo(() => {
+    if (!offOnly) return menu;
+    return menu
+      .map((c) => ({ ...c, items: c.items.filter((i) => !i.is_available) }))
+      .filter((c) => c.items.length > 0);
+  }, [menu, offOnly]);
+
   return (
     <section className="avail" aria-label="Dish availability">
       <header className="avail__head">
         <h2 className="avail__title">Availability · 86</h2>
+        <button
+          type="button"
+          className="avail__filter"
+          aria-pressed={offOnly}
+          onClick={() => setOffOnly((v) => !v)}
+          disabled={offCount === 0 && !offOnly}
+        >
+          {offCount === 0 ? "Nothing 86'd" : offOnly ? "Show all dishes" : "Show 86'd only"}
+          {offCount > 0 && <span className="avail__filter-n">{offCount}</span>}
+        </button>
       </header>
       <div className="avail__cats">
-        {menu.map((c) => (
+        {shown.map((c) => (
           <div key={c.id} className="avail__cat">
             <h3 className="avail__catname h-label">{c.name}</h3>
             <ul className="avail__list">

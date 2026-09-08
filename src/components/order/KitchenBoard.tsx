@@ -5,7 +5,7 @@
  * server rendered), so the board never computes time itself — `waited_min`
  * arrives as data. That keeps SSR and hydration identical.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePoll } from "./use-poll";
 import "./kitchen-board.css";
 
@@ -50,6 +50,23 @@ function urgency(min: number): "ok" | "warn" | "late" {
   return "ok";
 }
 
+/**
+ * What a cook wants to narrow to mid-service. Deliberately few: a filter bar
+ * you have to read is slower than the list it filters.
+ *
+ * "Late" uses the same 10-minute threshold the wait badge already shouts at, so
+ * the filter and the colour cannot disagree about what late means.
+ */
+const FILTERS = [
+  { key: "all", label: "All", match: () => true },
+  { key: "late", label: "Late", match: (o: KitchenOrderData) => urgency(o.waited_min) !== "ok" },
+  { key: "new", label: "Just in", match: (o: KitchenOrderData) => o.waited_min < 5 },
+  { key: "notes", label: "With notes", match: (o: KitchenOrderData) =>
+      Boolean(o.notes) || o.items.some((i) => Boolean(i.notes)) },
+] as const;
+
+type FilterKey = (typeof FILTERS)[number]["key"];
+
 export default function KitchenBoard({
   initialOrders,
   canComplete = true,
@@ -59,6 +76,7 @@ export default function KitchenBoard({
 }) {
   const [orders, setOrders] = useState<KitchenOrderData[]>(initialOrders);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<FilterKey>("all");
 
   // Poll the live queue. The server owns the truth; we just re-render it.
   // Throwing on a bad response is deliberate: usePoll backs off on failure, and
@@ -94,6 +112,17 @@ export default function KitchenBoard({
     }
   }
 
+  const counts = useMemo(() => {
+    const out = {} as Record<FilterKey, number>;
+    for (const f of FILTERS) out[f.key] = orders.filter(f.match).length;
+    return out;
+  }, [orders]);
+
+  const shown = useMemo(
+    () => orders.filter(FILTERS.find((f) => f.key === filter)!.match),
+    [orders, filter],
+  );
+
   if (orders.length === 0) {
     return (
       <p className="board__empty">
@@ -107,9 +136,35 @@ export default function KitchenBoard({
       <div className="board__head">
         <span className="board__label">In the pass</span>
         <span className="board__count">{orders.length}</span>
+
+        <div className="board__filters" role="group" aria-label="Show">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className="board__filter"
+              aria-pressed={filter === f.key}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+              {/* The count is the point: it shows there are late tickets
+                  without making anyone switch filters to find out. */}
+              {counts[f.key] > 0 && f.key !== "all" && (
+                <span className="board__filter-n">{counts[f.key]}</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {shown.length === 0 ? (
+        <p className="board__empty">
+          Nothing matches that filter. {orders.length} ticket
+          {orders.length === 1 ? "" : "s"} still in the pass.
+        </p>
+      ) : (
       <div className="board__list">
-        {orders.map((o) => (
+        {shown.map((o) => (
                   <article key={o.code} className={`ticket ticket--${o.status}`}>
                     <div className="ticket__top">
                       <span className="ticket__ident">
@@ -150,6 +205,7 @@ export default function KitchenBoard({
                   </article>
         ))}
       </div>
+      )}
     </section>
   );
 }
