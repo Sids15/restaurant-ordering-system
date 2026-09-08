@@ -323,10 +323,21 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
     height: 0;
   }
   .toggle__track {
+    /* The three numbers the switch is made of. The knob's travel is DERIVED
+       from them below rather than typed in, because a hand-picked distance
+       stops matching the moment any one of them changes. */
+    --track-w: 2.5rem;
+    --knob: 1rem;
+    --pad: 2px;
+
+    /* It sits in a flex cell, so without this it is shrinkable: squeeze the
+       column and the track narrows while the knob keeps its size, and the knob
+       ends up hanging out of the right-hand edge. */
+    flex: 0 0 auto;
     display: block;
-    width: 2.5rem;
-    height: 1.4rem;
-    padding: 2px;
+    width: var(--track-w);
+    height: calc(var(--knob) + var(--pad) * 2);
+    padding: var(--pad);
     border-radius: var(--radius-pill);
     background: var(--surface-sunken);
     box-shadow: inset 0 0 0 1px var(--border-strong);
@@ -337,8 +348,8 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
   .toggle__track::before {
     content: "";
     display: block;
-    width: 1rem;
-    height: 1rem;
+    width: var(--knob);
+    height: var(--knob);
     border-radius: 50%;
     background: var(--surface-raised);
     box-shadow: var(--shadow-sm);
@@ -348,8 +359,10 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
     background: var(--accent);
     box-shadow: inset 0 0 0 1px var(--accent);
   }
+  /* Exactly the free space inside the track: it lands flush against the far
+     padding and can never overshoot it. */
   .toggle:checked + .toggle__track::before {
-    transform: translateX(1.1rem);
+    transform: translateX(calc(var(--track-w) - var(--knob) - var(--pad) * 2));
   }
   /* A halo with a gap punched out of it, rather than an outline: an accent
      outline sitting 2px off an accent-filled pill reads as a doubled border. */
