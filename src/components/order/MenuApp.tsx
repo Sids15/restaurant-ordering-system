@@ -9,6 +9,7 @@
  * Placing an order POSTs to /api/orders and navigates to /order/<code>.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePoll } from "./use-poll";
 import type { VegType } from "../../lib/types";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -65,35 +66,21 @@ export default function MenuApp({ categories, table }: Props) {
   const hydrated = useRef(false);
 
   // Keep availability live so a dish 86'd in the kitchen drops off fast. Anon
-  // can't receive Realtime events under RLS (verified), so we poll — quickly,
-  // on mount, and the instant the tab regains focus (the common "flip from the
-  // kitchen tab" case).
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch("/api/menu/availability", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { ids?: string[] };
-        if (alive && Array.isArray(data.ids)) setAvailableIds(new Set(data.ids));
-      } catch {
-        /* transient — next tick retries */
-      }
-    };
-    tick(); // fresh on load
-    const id = setInterval(tick, 2000);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") tick();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      alive = false;
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, []);
+  // can't receive Realtime events under RLS (verified), so we poll.
+  //
+  // Every guest at every table runs this, so the interval is the app's single
+  // largest source of traffic — at two seconds, twenty occupied tables is ~36k
+  // requests an hour, most of them from phones sitting face-down with the tab
+  // in the background. usePoll stops entirely while the tab is hidden and
+  // catches up the instant it is looked at again, which is both cheaper and
+  // fresher than a timer that never sleeps. Five seconds while actually being
+  // read is still well inside the time it takes to choose a dish.
+  usePoll(async () => {
+    const res = await fetch("/api/menu/availability", { cache: "no-store" });
+    if (!res.ok) throw new Error(`availability: ${res.status}`);
+    const data = (await res.json()) as { ids?: string[] };
+    if (Array.isArray(data.ids)) setAvailableIds(new Set(data.ids));
+  }, 5000);
 
   // Load a saved cart once, on mount.
   useEffect(() => {

@@ -4,6 +4,7 @@
 import type { APIRoute } from "astro";
 import { requireStaff } from "../../../../lib/auth/session";
 import { canAdminister } from "../../../../lib/auth/access";
+import { invalidateGrants } from "../../../../lib/auth/grants-cache";
 import { setRole } from "../../../../lib/auth/rbac";
 
 export const prerender = false;
@@ -22,6 +23,10 @@ export const POST: APIRoute = async (context) => {
     String(form.get("id") ?? ""),
     String(form.get("role") ?? ""),
   );
+
+  // A role change moves someone between permission sets, and can be the
+  // moment the first owner appears — which is what ends the bootstrap.
+  if (result.ok) invalidateGrants();
 
   const q = result.ok ? "ok=role" : `err=${encodeURIComponent(result.error ?? "Couldn't change it.")}`;
   return context.redirect(`/staff/access?${q}`, 303);

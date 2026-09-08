@@ -4,7 +4,8 @@
  * "waiting" and flips to "Order placed" the moment a server accepts it. Stops
  * polling once the order is placed or cancelled.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { usePoll } from "./use-poll";
 import type { CustomerOrderState } from "../../lib/orders/track";
 
 const POLL_MS = 4000;
@@ -44,27 +45,20 @@ export default function OrderStatus({
 }) {
   const [state, setState] = useState<CustomerOrderState>(initialState);
 
-  useEffect(() => {
-    if (state !== "waiting") return;
-    let alive = true;
-
-    const tick = async () => {
-      try {
-        const res = await fetch(`/api/orders/${code}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { state?: CustomerOrderState };
-        if (alive && data.state && data.state !== state) setState(data.state);
-      } catch {
-        /* transient network error — the next tick retries */
-      }
-    };
-
-    const id = setInterval(tick, POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, [code, state]);
+  // Only "waiting" can still change from under us; once a server has accepted
+  // or cancelled the order there is nothing left to poll for.
+  const settled = state !== "waiting";
+  usePoll(
+    async () => {
+      if (settled) return;
+      const res = await fetch(`/api/orders/${code}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`order state: ${res.status}`);
+      const data = (await res.json()) as { state?: CustomerOrderState };
+      if (data.state && data.state !== state) setState(data.state);
+    },
+    POLL_MS,
+    { immediate: false }, // the page is rendered with the state it starts in
+  );
 
   const c = COPY[state];
   const stepIndex = state === "placed" ? 1 : 0;

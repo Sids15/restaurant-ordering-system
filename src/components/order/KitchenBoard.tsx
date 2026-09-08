@@ -5,7 +5,8 @@
  * server rendered), so the board never computes time itself — `waited_min`
  * arrives as data. That keeps SSR and hydration identical.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { usePoll } from "./use-poll";
 import "./kitchen-board.css";
 
 interface KitchenLine {
@@ -60,24 +61,18 @@ export default function KitchenBoard({
   const [busy, setBusy] = useState<Set<string>>(new Set());
 
   // Poll the live queue. The server owns the truth; we just re-render it.
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch("/api/staff/kitchen/active", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { orders?: KitchenOrderData[] };
-        if (alive && Array.isArray(data.orders)) setOrders(data.orders);
-      } catch {
-        /* transient — the next tick retries */
-      }
-    };
-    const id = setInterval(tick, POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+  // Throwing on a bad response is deliberate: usePoll backs off on failure, and
+  // it can only do that if it hears about one.
+  usePoll(
+    async () => {
+      const res = await fetch("/api/staff/kitchen/active", { cache: "no-store" });
+      if (!res.ok) throw new Error(`kitchen board: ${res.status}`);
+      const data = (await res.json()) as { orders?: KitchenOrderData[] };
+      if (Array.isArray(data.orders)) setOrders(data.orders);
+    },
+    POLL_MS,
+    { immediate: false }, // the board is server-rendered with its first batch
+  );
 
   async function complete(code: string) {
     setBusy((s) => new Set(s).add(code));

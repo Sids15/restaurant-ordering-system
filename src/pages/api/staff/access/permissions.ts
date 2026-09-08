@@ -9,6 +9,7 @@
 import type { APIRoute } from "astro";
 import { requireStaff } from "../../../../lib/auth/session";
 import { canAdminister } from "../../../../lib/auth/access";
+import { invalidateGrants } from "../../../../lib/auth/grants-cache";
 import { writeGrants, restoreDefaults } from "../../../../lib/auth/rbac";
 import { EDITABLE_ROLES } from "../../../../lib/auth/permissions";
 
@@ -28,6 +29,11 @@ export const POST: APIRoute = async (context) => {
     form.get("action") === "reset"
       ? await restoreDefaults(supabase)
       : await writeGrants(supabase, readMatrix(form));
+
+  // Grants are cached for a few seconds per instance; drop ours so the owner
+  // who just saved sees the change on their very next request rather than
+  // waiting out the TTL and wondering whether it saved.
+  if (result.ok) invalidateGrants();
 
   const q = result.ok
     ? `ok=${form.get("action") === "reset" ? "reset" : "saved"}`

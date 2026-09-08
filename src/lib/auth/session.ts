@@ -9,6 +9,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Role } from "../types";
 import { can, canAny, type Grants } from "./access";
 import { DEFAULT_GRANTS, PERMISSIONS, type Permission } from "./permissions";
+import { cachedGrants, cacheGrants, cachedOwnerExists, cacheOwnerExists } from "./grants-cache";
 
 /**
  * The roles that actually grant access. A profile with any other role (e.g. the
@@ -70,31 +71,55 @@ async function loadGrants(supabase: SupabaseClient, role: Role): Promise<Grants>
     return { role, permissions: new Set(PERMISSIONS.map((p) => p.name)), bootstrap: false };
   }
 
+  return {
+    role,
+    permissions: await grantsFor(supabase, role),
+    // Only a manager can be the bootstrap administrator, so nobody else pays
+    // for the question.
+    bootstrap: role === "manager" ? !(await anyOwnerExists(supabase)) : false,
+  };
+}
+
+/** This role's permissions, from the short-lived cache when it is warm. */
+async function grantsFor(supabase: SupabaseClient, role: Role): Promise<Set<string>> {
+  const hit = cachedGrants(role);
+  if (hit) return hit;
+
   const { data, error } = await supabase
     .from("role_permissions")
     .select("permission")
     .eq("role", role);
 
-  const permissions = error
-    ? new Set<string>(DEFAULT_GRANTS[role] ?? [])
-    : new Set<string>((data ?? []).map((r) => r.permission as string));
-
   if (error) {
+    // The table isn't there yet. Fall back to the pre-RBAC defaults and do NOT
+    // cache: migrations are applied by hand, so this should start working
+    // without waiting out a TTL. Without the fallback, the window between
+    // deploying and migrating would revoke every permission from every role at
+    // once and lock the floor out mid-service.
     console.warn("[auth] no RBAC grants — apply supabase/migrations/011_rbac.sql");
+    return new Set<string>(DEFAULT_GRANTS[role] ?? []);
   }
 
-  // Bootstrap only ever matters to a manager: it is what lets the first
-  // administrator in before any owner exists. Nobody else needs the query.
-  let bootstrap = false;
-  if (role === "manager") {
-    const { count, error: ownerErr } = await supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .eq("role", "owner");
-    bootstrap = !ownerErr && (count ?? 0) === 0;
-  }
+  const permissions = new Set<string>((data ?? []).map((r) => r.permission as string));
+  cacheGrants(role, permissions);
+  return permissions;
+}
 
-  return { role, permissions, bootstrap };
+/** Whether anyone owns this restaurant yet — see canAdminister(). */
+async function anyOwnerExists(supabase: SupabaseClient): Promise<boolean> {
+  const hit = cachedOwnerExists();
+  if (hit !== null) return hit;
+
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "owner");
+
+  // On error, assume an owner DOES exist: that closes the bootstrap door rather
+  // than opening it on a failed query.
+  const exists = error ? true : (count ?? 0) > 0;
+  if (!error) cacheOwnerExists(exists);
+  return exists;
 }
 
 /**

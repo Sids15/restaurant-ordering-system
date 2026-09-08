@@ -6,7 +6,8 @@
  *
  * Initial state comes from props (deterministic), so SSR and hydration match.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { usePoll } from "./use-poll";
 import "./availability-panel.css";
 
 interface Item {
@@ -30,25 +31,18 @@ export default function AvailabilityPanel({
   const [menu, setMenu] = useState<Category[]>(initialMenu);
   const [busy, setBusy] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch("/api/staff/kitchen/menu", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as { menu?: Category[] };
-        // Don't clobber a row mid-toggle.
-        if (alive && Array.isArray(data.menu) && busy.size === 0) setMenu(data.menu);
-      } catch {
-        /* transient — next tick retries */
-      }
-    };
-    const id = setInterval(tick, POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, [busy]);
+  usePoll(
+    async () => {
+      const res = await fetch("/api/staff/kitchen/menu", { cache: "no-store" });
+      if (!res.ok) throw new Error(`availability: ${res.status}`);
+      const data = (await res.json()) as { menu?: Category[] };
+      // Don't clobber a row mid-toggle. usePoll re-reads this closure every
+      // render, so `busy` here is current rather than captured once.
+      if (Array.isArray(data.menu) && busy.size === 0) setMenu(data.menu);
+    },
+    POLL_MS,
+    { immediate: false }, // the panel is server-rendered with the live menu
+  );
 
   function setItem(id: string, is_available: boolean) {
     setMenu((prev) =>

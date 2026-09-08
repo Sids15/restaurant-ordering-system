@@ -9,6 +9,7 @@
  * are identical.
  */
 import { useEffect, useState } from "react";
+import { usePoll } from "./use-poll";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
 import "./pending-queue.css";
@@ -37,27 +38,19 @@ export default function PendingQueue({
   const [orders, setOrders] = useState<PendingOrderData[]>(initialOrders);
   const [busy, setBusy] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch("/api/staff/orders/pending", {
-          cache: "no-store",
-          headers: { accept: "application/json" },
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as { orders?: PendingOrderData[] };
-        if (alive && Array.isArray(data.orders)) setOrders(data.orders);
-      } catch {
-        /* transient — next tick retries */
-      }
-    };
-    const id = setInterval(tick, POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+  usePoll(
+    async () => {
+      const res = await fetch("/api/staff/orders/pending", {
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`pending queue: ${res.status}`);
+      const data = (await res.json()) as { orders?: PendingOrderData[] };
+      if (Array.isArray(data.orders)) setOrders(data.orders);
+    },
+    POLL_MS,
+    { immediate: false }, // the desk is server-rendered with its first batch
+  );
 
   // Badge the tab title so a background console still signals waiting orders.
   useEffect(() => {
