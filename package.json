@@ -15,6 +15,7 @@
     "astro": "astro",
     "design": "node scripts/design-lint.mjs",
     "check-keys": "node scripts/check-keys.mjs",
+    "verify-rbac": "node scripts/verify-rbac.mjs",
     "test": "node scripts/day-range.test.mjs && node scripts/month-grid.test.mjs && node scripts/tab-assign.test.mjs && node scripts/rbac.test.mjs && node scripts/design-lint.mjs",
     "scan": "node scripts/safety-scan.mjs",
     "scan:all": "node scripts/safety-scan.mjs --all"
