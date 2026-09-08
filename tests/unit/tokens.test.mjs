@@ -44,7 +44,9 @@ ok(
 );
 
 // --- The mirror --------------------------------------------------------------
-const SECRET = "test-secret-at-least-sixteen-chars-long";
+// A fixed, obviously fake value so the signing tests are deterministic. It
+// signs nothing real and matches no deployed secret.
+const SECRET = "test-secret-at-least-sixteen-chars-long"; // safety-scan-ignore
 const b64url = (buf) =>
   buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const sign = (label, key) =>
