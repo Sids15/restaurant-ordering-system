@@ -35,7 +35,11 @@ export const POST: APIRoute = async (context) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return context.redirect(loginUrl(next, "invalid"), 303);
+    // Don't report every failure as "wrong password". A rejected sign-in is
+    // usually bad credentials, but a project-level setting can refuse the
+    // request before the password is ever checked — and saying "wrong
+    // password" then sends someone hunting for a problem they don't have.
+    return context.redirect(loginUrl(next, classify(error)), 303);
   }
 
   // With no explicit destination, land staff on their home surface: kitchen
@@ -52,6 +56,17 @@ export const POST: APIRoute = async (context) => {
 
   return context.redirect(dest, 303);
 };
+
+/** Map a Supabase auth failure onto an error the login page can explain. */
+function classify(error: { code?: string; message?: string }): string {
+  const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+  if (text.includes("captcha")) return "captcha";
+  if (text.includes("email not confirmed") || text.includes("email_not_confirmed")) {
+    return "unconfirmed";
+  }
+  if (text.includes("rate limit") || text.includes("over_request_rate")) return "throttled";
+  return "invalid";
+}
 
 function loginUrl(next: string, err: string): string {
   const q = new URLSearchParams({ next, error: err });

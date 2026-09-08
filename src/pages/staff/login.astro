@@ -31,6 +31,13 @@ if (user && profile && pathAllowed(next, grants)) {
 
 const ERROR_COPY: Record<string, string> = {
   invalid: "That email and password don't match. Please try again.",
+  // These two are project settings, not user error. Saying so saves whoever
+  // hits it from testing passwords that were never the problem.
+  captcha:
+    "Supabase is refusing sign-ins because CAPTCHA protection is on, and this app doesn't send a CAPTCHA. Turn it off under Authentication → Attack Protection.",
+  unconfirmed:
+    "That account hasn't been confirmed yet. Confirm it in Supabase → Authentication → Users, or tick Auto Confirm when creating it.",
+  missing: "Enter your email and password.",
   throttled: "Too many sign-in attempts. Please wait a few minutes and try again.",
 };
 const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;

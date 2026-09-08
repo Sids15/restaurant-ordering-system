@@ -44,6 +44,13 @@ In the Supabase dashboard → **SQL Editor**, run in order:
    order by p.role;
   ```
 
+> **Don't switch on CAPTCHA protection** (Authentication → Attack Protection).
+> The staff login posts an email and password straight to Supabase and sends no
+> CAPTCHA token, so turning it on rejects every sign-in with `captcha_failed`
+> before the password is checked. Leaked-password protection on the same page is
+> safe and worth having. Credential stuffing is covered by the per-IP and
+> per-account throttles in `src/middleware.ts` and `/api/auth/login`.
+
 ### What each role can open
 | | manager | server | kitchen |
 |---|---|---|---|
