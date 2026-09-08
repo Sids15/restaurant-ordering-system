@@ -1,0 +1,655 @@
+---
+/**
+ * Analytics — the owner's read on how the restaurant is doing. Manager only.
+ *
+ * Opens on the last 30 days and takes any period the calendar can express.
+ * Every headline figure is shown against the equally-long span immediately
+ * before it, because a number on its own says nothing: ₹2.4 lakh is a good
+ * month or a bad one depending entirely on what last month did.
+ *
+ * Charts are laid out in CSS rather than drawn — no library to load, no
+ * client-side rendering, and each bar is a real element that carries its own
+ * figure in a title, so the numbers are readable without a tooltip script.
+ */
+import AppLayout from "../../layouts/AppLayout.astro";
+import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
+import PeriodPicker from "../../components/staff/PeriodPicker.astro";
+import { dayLabel, monthRange } from "../../lib/orders/day";
+import { resolvePeriod } from "../../lib/orders/period";
+import { getDailyTotals } from "../../lib/orders/manager";
+import { getAnalytics, type Point, type DishRow, type NamedTotal } from "../../lib/orders/analytics";
+import { formatINR } from "../../lib/money";
+import { brand } from "../../data/brand";
+import "../../styles/staff.css";
+
+export const prerender = false;
+
+const { supabase, profile } = Astro.locals;
+if (profile!.role !== "manager") return Astro.redirect("/staff", 302);
+
+const sel = resolvePeriod(Astro.url, "/staff/analytics", { defaultDays: 30 });
+const [a, activity] = await Promise.all([
+  getAnalytics(supabase, sel.period, sel.previous, brand.timezone),
+  getDailyTotals(supabase, monthRange(sel.viewMonth)),
+]);
+
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+const money = (n: number) => formatINR(Math.round(n));
+
+/** Change against the previous period. Null when there's nothing to compare. */
+function delta(now: number, before: number): { pc: number; up: boolean } | null {
+  if (!before) return null;
+  const pc = (now - before) / before;
+  if (!Number.isFinite(pc)) return null;
+  return { pc, up: pc >= 0 };
+}
+
+const headline = [
+  { label: "Takings", value: money(a.headline.takings), d: delta(a.headline.takings, a.previous.takings), lead: true },
+  { label: "Orders", value: String(a.headline.orders), d: delta(a.headline.orders, a.previous.orders) },
+  { label: "Average order", value: money(a.headline.aov), d: delta(a.headline.aov, a.previous.aov) },
+  { label: "Tables seated", value: String(a.headline.tables), d: delta(a.headline.tables, a.previous.tables) },
+  { label: "Average per table", value: money(a.headline.perTable), d: delta(a.headline.perTable, a.previous.perTable) },
+  {
+    label: "Voided",
+    value: a.headline.voids === 0 ? "None" : `${a.headline.voids} · ${pct(a.headline.voidRate)}`,
+    d: null,
+    // More voids is never the good direction, so it never gets a green arrow.
+    warn: a.headline.voidRate > 0.05,
+  },
+];
+
+/** Bar geometry for a series, scaled to its own peak. */
+function bars(points: Point[], field: "takings" | "orders") {
+  const peak = Math.max(...points.map((p) => p[field]), 0);
+  return points.map((p) => ({
+    ...p,
+    value: p[field],
+    /** Height as a percentage, so the SVG scales with its container. */
+    h: peak === 0 ? 0 : (p[field] / peak) * 100,
+    peak: peak > 0 && p[field] === peak,
+  }));
+}
+
+const dailyBars = bars(a.daily, "takings");
+const hourBars = bars(a.byHour, "orders");
+const weekdayBars = bars(a.byWeekday, "takings");
+
+// Trading hours only — a 24-column chart of a restaurant that opens at noon is
+// half empty, and the empty half is not information.
+const openHours = hourBars.filter((h) => h.orders > 0);
+const firstHour = openHours.length ? Number(openHours[0].key) : 0;
+const lastHour = openHours.length ? Number(openHours[openHours.length - 1].key) : 23;
+const shownHours = hourBars.filter(
+  (h) => Number(h.key) >= firstHour && Number(h.key) <= lastHour,
+);
+
+const busiestHour = hourBars.reduce((b, h) => (h.orders > b.orders ? h : b), hourBars[0]);
+const bestWeekday = weekdayBars.reduce((b, d) => (d.takings > b.takings ? d : b), weekdayBars[0]);
+
+const mins = (m: number | null) =>
+  m === null ? "—" : m < 60 ? `${Math.round(m)} min` : `${Math.floor(m / 60)}h ${Math.round(m % 60)}m`;
+
+const sourceTotal = a.source.guest + a.source.server;
+const empty = a.headline.orders === 0 && a.headline.voids === 0;
+---
+
+<AppLayout title={`Analytics — ${brand.name}`}>
+  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+    <StationMasthead title="Analytics" eyebrow={sel.label}>
+      <PeriodPicker slot="actions" sel={sel} activity={activity} basePath="/staff/analytics" />
+    </StationMasthead>
+
+    {a.truncated && (
+      <p class="st-alert st-alert--error" role="alert">
+        This period holds more rows than can be read at once, so these figures are
+        incomplete. Narrow the range.
+      </p>
+    )}
+
+    {empty ? (
+      <p class="st-empty st-rise">
+        Nothing was ordered in this period. Pick a wider range, or{" "}
+        <a href={`/staff/analytics?from=${sel.presets[1].from}&to=${sel.presets[1].to}`}>
+          try the last 30 days
+        </a>.
+      </p>
+    ) : (
+      <>
+        {/* --- Headline ------------------------------------------------- */}
+        <section class="cards st-rise" aria-label="Headline figures">
+          {
+            headline.map((h) => (
+              <div class:list={["card", h.lead && "card--lead"]}>
+                <p class="card__label">{h.label}</p>
+                <p class="card__value">{h.value}</p>
+                {h.d && (
+                  <p class:list={["card__delta", h.d.up ? "is-up" : "is-down"]}>
+                    <span aria-hidden="true">{h.d.up ? "▲" : "▼"}</span>
+                    {pct(Math.abs(h.d.pc))}
+                    <span class="card__vs"> vs previous {sel.span} days</span>
+                  </p>
+                )}
+                {h.warn && <p class="card__delta is-down">Worth a look</p>}
+              </div>
+            ))
+          }
+        </section>
+
+        {/* --- Revenue over time ---------------------------------------- */}
+        <section class="panel st-rise-2" aria-labelledby="trend-h">
+          <div class="panel__head">
+            <h2 class="panel__title" id="trend-h">Takings by day</h2>
+            <p class="panel__note">Tallest bar is the best day in this period.</p>
+          </div>
+          <div class="chart chart--wide" role="img" aria-label={`Daily takings across ${sel.span} days`}>
+            {
+              dailyBars.map((b) => (
+                <div class="chart__col" title={`${dayLabel(b.key)} — ${money(b.takings)}`}>
+                  <div class:list={["chart__bar", b.peak && "chart__bar--peak"]} style={`height:${b.h}%`}></div>
+                </div>
+              ))
+            }
+          </div>
+          <div class="chart__axis">
+            <span>{dayLabel(a.daily[0]?.key ?? sel.from)}</span>
+            <span>{dayLabel(a.daily[a.daily.length - 1]?.key ?? sel.to)}</span>
+          </div>
+        </section>
+
+        {/* --- When it's busy ------------------------------------------- */}
+        <div class="split st-rise-2">
+          <section class="panel" aria-labelledby="hours-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="hours-h">Orders by hour</h2>
+              <p class="panel__note">
+                {busiestHour && busiestHour.orders > 0
+                  ? `Busiest at ${busiestHour.label}. Staff for it.`
+                  : "No orders yet in this period."}
+              </p>
+            </div>
+            <div class="chart" role="img" aria-label="Orders by hour of day">
+              {
+                shownHours.map((b) => (
+                  <div class="chart__col" title={`${b.label} — ${b.orders} orders`}>
+                    <div class:list={["chart__bar", b.peak && "chart__bar--peak"]} style={`height:${b.h}%`}></div>
+                    <span class="chart__tick">{b.key}</span>
+                  </div>
+                ))
+              }
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="days-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="days-h">Takings by weekday</h2>
+              <p class="panel__note">
+                {bestWeekday && bestWeekday.takings > 0
+                  ? `${bestWeekday.label} earns most.`
+                  : "Nothing to compare yet."}
+              </p>
+            </div>
+            <ul class="meters">
+              {
+                weekdayBars.map((d) => (
+                  <li class="meter">
+                    <span class="meter__label">{d.label.slice(0, 3)}</span>
+                    <span class="meter__track">
+                      <span class:list={["meter__fill", d.peak && "meter__fill--peak"]} style={`width:${d.h}%`}></span>
+                    </span>
+                    <span class="meter__value">{money(d.takings)}</span>
+                  </li>
+                ))
+              }
+            </ul>
+          </section>
+        </div>
+
+        {/* --- What sells ------------------------------------------------ */}
+        <div class="split st-rise-2">
+          <section class="panel" aria-labelledby="dishes-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="dishes-h">Top dishes</h2>
+              <p class="panel__note">By revenue, not plates — a cheap dish selling well can still earn little.</p>
+            </div>
+            <ul class="rank">
+              {
+                a.dishes.map((d, i) => (
+                  <li class="rank__row">
+                    <span class="rank__n">{i + 1}</span>
+                    <span class="rank__name">{d.name}</span>
+                    <span class="rank__qty">{d.qty}×</span>
+                    <span class="rank__value">{money(d.revenue)}</span>
+                  </li>
+                ))
+              }
+            </ul>
+          </section>
+
+          <section class="panel" aria-labelledby="mix-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="mix-h">Menu mix</h2>
+              <p class="panel__note">Where the money comes from.</p>
+            </div>
+            <ul class="meters">
+              {
+                a.categories.slice(0, 6).map((c) => (
+                  <li class="meter">
+                    <span class="meter__label meter__label--wide">{c.name}</span>
+                    <span class="meter__track">
+                      <span class="meter__fill" style={`width:${Math.round(c.share * 100)}%`}></span>
+                    </span>
+                    <span class="meter__value">{pct(c.share)}</span>
+                  </li>
+                ))
+              }
+            </ul>
+            {a.vegMix.length > 0 && (
+              <ul class="meters meters--tight">
+                {a.vegMix.map((v) => (
+                  <li class="meter">
+                    <span class="meter__label meter__label--wide">{v.name}</span>
+                    <span class="meter__track">
+                      <span class="meter__fill meter__fill--quiet" style={`width:${Math.round(v.share * 100)}%`}></span>
+                    </span>
+                    <span class="meter__value">{pct(v.share)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* --- Service --------------------------------------------------- */}
+        <div class="split st-rise-2">
+          <section class="panel" aria-labelledby="ops-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="ops-h">Service</h2>
+            </div>
+            <dl class="facts">
+              <div>
+                <dt>Guests who ordered themselves</dt>
+                <dd>
+                  {sourceTotal === 0 ? "—" : pct(a.source.guest / sourceTotal)}
+                  <span class="facts__sub">
+                    {a.source.guest} scanned · {a.source.server} taken by a server
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>Rounds per table</dt>
+                <dd>{a.roundsPerTab ? a.roundsPerTab.toFixed(1) : "—"}</dd>
+              </div>
+              <div>
+                <dt>Time to accept an order</dt>
+                <dd>{mins(a.confirmMedian)}<span class="facts__sub">median</span></dd>
+              </div>
+              <div>
+                <dt>Table turn</dt>
+                <dd>{mins(a.tabMedian)}<span class="facts__sub">median, open to paid</span></dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="panel" aria-labelledby="people-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="people-h">By server</h2>
+              <p class="panel__note">Only counts tables someone was actually assigned to.</p>
+            </div>
+            {a.servers.length === 0 ? (
+              <p class="st-empty">
+                No tables were assigned in this period. Assign one from a tab's bill and it
+                will show here.
+              </p>
+            ) : (
+              <ul class="rank">
+                {a.servers.map((sv: NamedTotal) => (
+                  <li class="rank__row">
+                    <span class="rank__name">{sv.name}</span>
+                    <span class="rank__qty">{sv.count} {sv.count === 1 ? "table" : "tables"}</span>
+                    <span class="rank__value">{money(sv.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* --- Things to look at ----------------------------------------- */}
+        <div class="split st-rise-2">
+          <section class="panel" aria-labelledby="slow-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="slow-h">Slowest movers</h2>
+              <p class="panel__note">Sold at least once, but least of all. Candidates to cut or push.</p>
+            </div>
+            <ul class="rank">
+              {
+                a.slow.map((d: DishRow) => (
+                  <li class="rank__row">
+                    <span class="rank__name">{d.name}</span>
+                    <span class="rank__qty">{d.qty}×</span>
+                    <span class="rank__value">{money(d.revenue)}</span>
+                  </li>
+                ))
+              }
+            </ul>
+          </section>
+
+          <section class="panel" aria-labelledby="voids-h">
+            <div class="panel__head">
+              <h2 class="panel__title" id="voids-h">Voids</h2>
+              <p class="panel__note">Who cancelled rounds, and what they were worth.</p>
+            </div>
+            {a.voidsBy.length === 0 ? (
+              <p class="st-empty">Nothing was voided in this period.</p>
+            ) : (
+              <ul class="rank">
+                {a.voidsBy.map((v: NamedTotal) => (
+                  <li class="rank__row">
+                    <span class="rank__name">{v.name}</span>
+                    <span class="rank__qty">{v.count}</span>
+                    <span class="rank__value">{money(v.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* --- Tables ---------------------------------------------------- */}
+        <section class="panel st-rise-2" aria-labelledby="tables-h">
+          <div class="panel__head">
+            <h2 class="panel__title" id="tables-h">Busiest tables</h2>
+            <p class="panel__note">Useful for seating: which tables actually earn.</p>
+          </div>
+          <ul class="rank rank--grid">
+            {
+              a.tables.map((t: NamedTotal) => (
+                <li class="rank__row">
+                  <span class="rank__name">Table {t.name}</span>
+                  <span class="rank__qty">{t.count}</span>
+                  <span class="rank__value">{money(t.value)}</span>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      </>
+    )}
+  </StationShell>
+</AppLayout>
+
+<style>
+  /* --- Headline cards ------------------------------------------------- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .card {
+    background: var(--surface-raised);
+    padding: var(--space-16) var(--space-24) var(--space-24);
+  }
+  .card__label {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .card__value {
+    margin-block-start: var(--space-8);
+    font-size: var(--fs-heading-m);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .card--lead .card__value {
+    font-family: var(--font-display);
+    font-size: var(--fs-heading-l);
+    font-weight: 400;
+  }
+  .card__delta {
+    margin-block-start: var(--space-8);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .card__delta.is-up {
+    color: var(--status-ready);
+  }
+  .card__delta.is-down {
+    color: var(--danger);
+  }
+  .card__vs {
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  /* --- Panels ---------------------------------------------------------- */
+  .panel {
+    padding: var(--space-24);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .panel__head {
+    margin-block-end: var(--space-16);
+  }
+  .panel__title {
+    font-family: var(--font-display);
+    color: var(--ink);
+  }
+  .panel__note {
+    margin-block-start: var(--space-4);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Each panel is as tall as its own content. Stretching the shorter one to
+       match its neighbour just adds an empty half-card. */
+    align-items: start;
+    gap: var(--space-24);
+  }
+
+  /* --- Bar charts ------------------------------------------------------ */
+  .chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 9rem;
+  }
+  .chart--wide {
+    height: 11rem;
+  }
+  .chart__col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    height: 100%;
+  }
+  .chart__bar {
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    /* A day that took nothing still needs to read as a column, not a gap. */
+    min-height: 2px;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .chart__col:hover .chart__bar {
+    background: var(--accent);
+  }
+  .chart__bar--peak {
+    background: var(--accent);
+  }
+  .chart__tick {
+    margin-block-start: var(--space-4);
+    font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+  .chart__axis {
+    display: flex;
+    justify-content: space-between;
+    margin-block-start: var(--space-8);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+
+  /* --- Horizontal meters ----------------------------------------------- */
+  .meters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+  .meters--tight {
+    margin-block-start: var(--space-16);
+    padding-block-start: var(--space-16);
+    border-top: 1px solid var(--border);
+  }
+  .meter {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr auto;
+    align-items: center;
+    gap: var(--space-12);
+  }
+  .meter__label {
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .meter__label--wide {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .meter:has(.meter__label--wide) {
+    grid-template-columns: 8rem 1fr auto;
+  }
+  .meter__track {
+    height: 0.5rem;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .meter__fill {
+    display: block;
+    height: 100%;
+    background: var(--accent-soft);
+    border-radius: var(--radius-pill);
+  }
+  .meter__fill--peak {
+    background: var(--accent);
+  }
+  .meter__fill--quiet {
+    background: var(--border-strong);
+  }
+  .meter__value {
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-align: end;
+    min-width: 4rem;
+  }
+
+  /* --- Ranked lists ----------------------------------------------------- */
+  .rank {
+    display: flex;
+    flex-direction: column;
+  }
+  .rank--grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0 var(--space-24);
+  }
+  .rank__row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-12);
+    padding-block: var(--space-8);
+    border-bottom: 1px solid var(--border);
+    font-size: var(--fs-body);
+  }
+  .rank__row:last-child {
+    border-bottom: 0;
+  }
+  .rank__n {
+    flex: 0 0 1.25rem;
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+  .rank__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink);
+  }
+  .rank__qty {
+    flex: 0 0 auto;
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+  .rank__value {
+    flex: 0 0 auto;
+    min-width: 5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-align: end;
+  }
+
+  /* --- Fact list --------------------------------------------------------- */
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-24);
+  }
+  .facts dt {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .facts dd {
+    margin-block-start: var(--space-4);
+    font-size: var(--fs-heading-s);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .facts__sub {
+    display: block;
+    margin-block-start: 2px;
+    font-size: var(--fs-caption);
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  @media (max-width: 60rem) {
+    .split {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 36rem) {
+    .facts {
+      grid-template-columns: 1fr;
+    }
+    .chart__tick {
+      display: none;
+    }
+  }
+</style>

@@ -22,6 +22,8 @@ export function allowedRoles(pathname: string): Role[] | null {
   }
   // The day's takings, orders and tabs — a manager's overview of the shift.
   if (pathname === "/staff/today") return ["manager"];
+  // Trading performance: revenue, menu mix, staff and void figures.
+  if (pathname === "/staff/analytics") return ["manager"];
   if (pathname === "/staff" || pathname.startsWith("/staff/")) {
     return ["server", "manager"];
   }
