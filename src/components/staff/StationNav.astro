@@ -45,8 +45,12 @@ const current = links.reduce((best, l) => {
 }, "");
 
 // The seed accounts use the role as the name; showing "kitchen / kitchen"
-// twice reads like a bug, so the name is dropped when it says nothing new.
-const showName = name && name.trim().toLowerCase() !== role;
+// twice reads like a bug, so the identity collapses to one line when the name
+// says nothing the role doesn't.
+const clean = (name ?? "").trim();
+const showName = Boolean(clean) && clean.toLowerCase() !== role;
+const primary = showName ? clean : role;
+const initial = primary.charAt(0).toUpperCase();
 ---
 
 <aside class="stnav">
@@ -76,12 +80,25 @@ const showName = name && name.trim().toLowerCase() !== role;
   </nav>
 
   <div class="stnav__foot">
-    <span class="stnav__who">
-      {showName && <span class="stnav__name">{name}</span>}
-      <span class="stnav__role">{role}</span>
-    </span>
-    <form method="post" action="/api/auth/logout">
-      <button class="stnav__signout" type="submit">Sign out</button>
+    <div class="stnav__who" title={showName ? `${primary} · ${role}` : role}>
+      <span class="stnav__avatar" aria-hidden="true">{initial}</span>
+      <span class="stnav__id">
+        <span class="stnav__name">{primary}</span>
+        {showName && <span class="stnav__role">{role}</span>}
+      </span>
+    </div>
+    <form class="stnav__out" method="post" action="/api/auth/logout">
+      <button class="stnav__signout" type="submit">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path
+            d="M5.5 12.5H2.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3M9 9.5 12 7 9 4.5M12 7H5"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        <span>Sign out</span>
+      </button>
     </form>
   </div>
 </aside>

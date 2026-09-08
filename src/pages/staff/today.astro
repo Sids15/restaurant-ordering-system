@@ -9,8 +9,17 @@
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
 import StationShell from "../../components/staff/StationShell.astro";
-import { dayRange, dayLabel, localDateKey } from "../../lib/orders/day";
-import { getDaySummary } from "../../lib/orders/manager";
+import {
+  dayRange,
+  dayLabel,
+  localDateKey,
+  monthRange,
+  monthKeyOf,
+  monthLabel,
+  monthGrid,
+  shiftMonth,
+} from "../../lib/orders/day";
+import { getDaySummary, getMonthActivity } from "../../lib/orders/manager";
 import { assigneeName } from "../../lib/orders/assign";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -34,6 +43,20 @@ const shift = (days: number): string => {
 const prevKey = shift(-1);
 const nextKey = shift(1);
 const atToday = range.key === today;
+
+// --- The day picker -------------------------------------------------------
+// `?month=` decides which month the picker shows, independently of `?date=`.
+// Paging months is therefore a plain link, and its presence is what holds the
+// popover open across the reload — so month navigation needs no JavaScript.
+const monthParam = Astro.url.searchParams.get("month");
+const viewMonth = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : monthKeyOf(range.key);
+const cells = monthGrid(viewMonth);
+const activity = await getMonthActivity(supabase, monthRange(viewMonth));
+const thisMonth = monthKeyOf(today);
+
+/** Page the calendar without losing the day you are looking at. */
+const monthHref = (key: string) => `/staff/today?date=${range.key}&month=${key}`;
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-IN", {
@@ -69,6 +92,67 @@ function stamp(iso: string): string {
           <span aria-hidden="true">←</span>
           <span class="visually-hidden">Previous day</span>
         </a>
+
+        <details class="cal" open={Boolean(monthParam)}>
+          <summary class="cal__toggle">
+            <span>Pick a day</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+              <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </summary>
+
+          <div class="cal__pop">
+            <div class="cal__head">
+              <a class="cal__month-step" href={monthHref(shiftMonth(viewMonth, -1))}>
+                <span aria-hidden="true">←</span>
+                <span class="visually-hidden">Previous month</span>
+              </a>
+              <span class="cal__month">{monthLabel(viewMonth)}</span>
+              <a
+                class="cal__month-step"
+                href={viewMonth >= thisMonth ? undefined : monthHref(shiftMonth(viewMonth, 1))}
+                aria-disabled={viewMonth >= thisMonth ? "true" : undefined}
+              >
+                <span aria-hidden="true">→</span>
+                <span class="visually-hidden">Next month</span>
+              </a>
+            </div>
+
+            <div class="cal__grid" role="presentation">
+              {WEEKDAYS.map((d) => <span class="cal__dow">{d}</span>)}
+              {
+                cells.map((c) => {
+                  const took = activity.get(c.key);
+                  const label = took
+                    ? `${dayLabel(c.key)} — ${formatINR(took.takings)} from ${took.orders} ${took.orders === 1 ? "order" : "orders"}`
+                    : `${dayLabel(c.key)} — nothing taken`;
+                  return c.future ? (
+                    <span class="cal__day cal__day--off" aria-hidden="true">{c.day}</span>
+                  ) : (
+                    <a
+                      class:list={[
+                        "cal__day",
+                        !c.inMonth && "cal__day--outside",
+                        c.today && "cal__day--today",
+                        c.key === range.key && "cal__day--on",
+                      ]}
+                      href={`/staff/today?date=${c.key}`}
+                      aria-current={c.key === range.key ? "date" : undefined}
+                      aria-label={label}
+                      title={label}
+                    >
+                      {c.day}
+                      {took && <span class="cal__dot" aria-hidden="true"></span>}
+                    </a>
+                  );
+                })
+              }
+            </div>
+
+            <a class="cal__jump" href="/staff/today">Jump to today</a>
+          </div>
+        </details>
+
         {!atToday && <a class="daynav__today" href="/staff/today">Today</a>}
         <a
           class="daynav__step"
@@ -193,6 +277,23 @@ function stamp(iso: string): string {
   </StationShell>
 </AppLayout>
 
+<script>
+  // Progressive enhancement: the picker opens, pages months and selects a day
+  // with JavaScript off. This only closes it the ways people expect.
+  const cal = document.querySelector<HTMLDetailsElement>(".cal");
+  if (cal) {
+    document.addEventListener("click", (e) => {
+      if (cal.open && !cal.contains(e.target as Node)) cal.open = false;
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && cal.open) {
+        cal.open = false;
+        cal.querySelector<HTMLElement>(".cal__toggle")?.focus();
+      }
+    });
+  }
+</script>
+
 <style>
   .daynav {
     display: flex;
@@ -222,6 +323,181 @@ function stamp(iso: string): string {
   .daynav__step[aria-disabled="true"] {
     opacity: 0.35;
     pointer-events: none;
+  }
+
+  /* --- Day picker ---------------------------------------------------------
+     A <details> popover: month paging is a link carrying ?month=, and that
+     parameter is what re-opens the panel after the reload, so the whole thing
+     works with JavaScript off. The script below only adds the conveniences
+     (click-away, Escape). */
+  .cal {
+    position: relative;
+  }
+  .cal__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-8);
+    min-height: var(--tap);
+    padding-inline: var(--space-16);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .cal__toggle::-webkit-details-marker {
+    display: none;
+  }
+  .cal__toggle:hover {
+    color: var(--ink);
+    border-color: var(--ink-muted);
+  }
+  .cal[open] .cal__toggle {
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  .cal[open] .cal__toggle svg {
+    transform: rotate(180deg);
+  }
+  .cal__toggle svg {
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  .cal__pop {
+    position: absolute;
+    z-index: var(--z-overlay);
+    inset-block-start: calc(100% + var(--space-8));
+    inset-inline-end: 0;
+    width: 20rem;
+    padding: var(--space-16);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    margin-block-end: var(--space-12);
+  }
+  .cal__month {
+    font-family: var(--font-display);
+    font-size: var(--fs-heading-s);
+    color: var(--ink);
+  }
+  .cal__month-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    border-radius: var(--radius-sm);
+    color: var(--ink-muted);
+    transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .cal__month-step:hover {
+    color: var(--ink);
+    background: var(--surface-sunken);
+  }
+  .cal__month-step[aria-disabled="true"] {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  .cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal__dow {
+    padding-block-end: var(--space-8);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+  .cal__day {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .cal__day:hover {
+    background: var(--surface-sunken);
+  }
+  .cal__day--outside {
+    color: var(--ink-muted);
+    opacity: 0.55;
+  }
+  /* Days that haven't happened. Rendered, not omitted, so the grid keeps its
+     shape and the week columns stay aligned. */
+  .cal__day--off {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+    opacity: 0.25;
+  }
+  .cal__day--today {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .cal__day--on,
+  .cal__day--on:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+  }
+
+  /* Presence, not amount: the calendar's job is navigation, and 42 squares of
+     currency would be a wall. The figure is on the square's label instead. */
+  .cal__dot {
+    position: absolute;
+    inset-block-end: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .cal__day--on .cal__dot {
+    background: var(--on-accent);
+  }
+
+  .cal__jump {
+    display: block;
+    margin-block-start: var(--space-12);
+    padding-block-start: var(--space-12);
+    border-top: 1px solid var(--border);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  @media (max-width: 36rem) {
+    .cal__pop {
+      width: min(20rem, calc(100vw - 2 * var(--gutter)));
+    }
   }
 
   /* Summary strip. Takings gets the display face and twice the size — it is the

@@ -7,7 +7,7 @@
  * manager can see it happened, but never in a figure.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { localDateKey, type DayRange } from "./day";
+import { localDateKey, type DayRange, type MonthRange } from "./day";
 import type { TabStatus } from "../types";
 import { ASSIGNED_EMBED, type Assignee } from "./assign";
 import { selectOptional } from "../supabase/optional-columns";
@@ -164,4 +164,47 @@ export async function getDaySummary(
       closedValue: closedTabs.reduce((s, t) => s + t.subtotal, 0),
     },
   };
+}
+
+// --- Month activity (the day picker's dots) ----------------------------------
+
+export interface DayActivity {
+  orders: number;
+  takings: number;
+}
+
+/**
+ * Which days in a month actually traded, and for how much.
+ *
+ * Powers the dots in the day picker, so a manager can see at a glance which
+ * days are worth opening — and spot a day that should have traded and didn't.
+ * Grouped in the restaurant's zone, not UTC, for the same reason the day
+ * boundaries are (lib/orders/day.ts): a 00:30 bill belongs to the night it was
+ * taken, not to the next morning.
+ *
+ * Cancelled rounds count toward neither figure, matching getDaySummary.
+ */
+export async function getMonthActivity(
+  supabase: SupabaseClient,
+  range: MonthRange,
+  timeZone?: string,
+): Promise<Map<string, DayActivity>> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("status, subtotal, created_at")
+    .gte("created_at", range.start.toISOString())
+    .lt("created_at", range.end.toISOString());
+
+  const byDay = new Map<string, DayActivity>();
+  if (error || !data) return byDay;
+
+  for (const o of data) {
+    if (!COUNTS_AS_MONEY(o.status as string)) continue;
+    const key = localDateKey(new Date(o.created_at as string), timeZone);
+    const cur = byDay.get(key) ?? { orders: 0, takings: 0 };
+    cur.orders += 1;
+    cur.takings += Number(o.subtotal);
+    byDay.set(key, cur);
+  }
+  return byDay;
 }
