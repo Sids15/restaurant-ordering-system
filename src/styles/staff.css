@@ -106,23 +106,23 @@
   color: var(--accent);
 }
 
-/* Who's signed in, then the way out. The identity is an object — initial,
-   name, role — rather than three stacked lines, and Sign out is a real control
-   with a hit box rather than a sentence that happens to be clickable. */
+/* Who's signed in, and the way out, on ONE row — identity leading, action
+   trailing. Stacked they read as two unrelated blocks with a lot of air
+   between them; side by side they read as one footer. */
 .stnav__foot {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-8);
   margin-block-start: auto;
   padding-block-start: var(--space-12);
   border-top: 1px solid var(--border);
 }
 .stnav__who {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-8);
   min-width: 0;
-  padding: var(--space-8);
 }
 .stnav__avatar {
   flex: 0 0 auto;
@@ -163,19 +163,17 @@
   color: var(--ink-muted);
 }
 .stnav__out {
-  display: contents;
+  flex: 0 0 auto;
 }
+/* Icon only. The rail is 15rem, and a name of any real length plus a labelled
+   button does not fit — truncating someone's name to keep the words "Sign out"
+   is the wrong trade. The label lives in the tooltip and for screen readers. */
 .stnav__signout {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  width: 100%;
-  min-height: var(--tap);
-  padding-inline: var(--space-8);
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
   border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: var(--fs-caption);
-  font-weight: 500;
   color: var(--ink-muted);
   transition:
     color var(--dur-fast) var(--ease-out),
@@ -184,9 +182,6 @@
 .stnav__signout:hover {
   color: var(--danger);
   background: var(--danger-soft);
-}
-.stnav__signout svg {
-  flex: 0 0 auto;
 }
 
 /* Below the breakpoint the sidebar becomes a scrollable top bar — a 15rem rail
@@ -225,19 +220,12 @@
     padding-block-start: 0;
     border-top: 0;
   }
+  /* In the top bar the name would push the stations off-screen; the avatar
+     carries the identity, and the full name is still in its title. */
   .stnav__who {
-    padding: 0;
+    flex: 0 0 auto;
   }
-  /* In the top bar the name would push the stations off-screen; the avatar and
-     role carry the identity, and the full name is still in its title. */
-  .stnav__name {
-    display: none;
-  }
-  .stnav__signout {
-    width: auto;
-    padding-inline: var(--space-12);
-  }
-  .stnav__signout span {
+  .stnav__id {
     display: none;
   }
 }

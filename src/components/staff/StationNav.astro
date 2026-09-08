@@ -91,8 +91,8 @@ const initial = primary.charAt(0).toUpperCase();
       </span>
     </div>
     <form class="stnav__out" method="post" action="/api/auth/logout">
-      <button class="stnav__signout" type="submit">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <button class="stnav__signout" type="submit" title="Sign out">
+        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path
             d="M5.5 12.5H2.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3M9 9.5 12 7 9 4.5M12 7H5"
             stroke="currentColor"
@@ -100,7 +100,7 @@ const initial = primary.charAt(0).toUpperCase();
             stroke-linecap="round"
             stroke-linejoin="round"></path>
         </svg>
-        <span>Sign out</span>
+        <span class="visually-hidden">Sign out</span>
       </button>
     </form>
   </div>
