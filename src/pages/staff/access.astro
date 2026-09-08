@@ -72,19 +72,26 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
     {err && <p class="st-alert st-alert--error" role="alert">{err}</p>}
 
     {grants!.bootstrap && (
-      <p class="st-alert" role="status">
-        <strong>No owner yet.</strong> You can open this page because nobody owns this
-        restaurant. Make yourself the owner below — after that, only an owner can change
-        who may do what, and this door closes.
-      </p>
+      <div class="st-alert bootstrap" role="status">
+        <p>
+          <strong>No owner yet.</strong> You can see this page because nobody owns this
+          restaurant — but nothing on it will save. Changing roles and permissions is
+          owner-only in the database itself, so it can't be granted from here.
+        </p>
+        <p>
+          Run this once in the Supabase SQL editor, with your own email, then reload:
+        </p>
+        <pre class="bootstrap__sql"><code>update profiles set role = 'owner'
+ where id = (select id from auth.users
+              where email = 'you@example.com');</code></pre>
+      </div>
     )}
 
-    {!ready ? (
+    {!ready || grants!.bootstrap ? (
       <p class="st-empty st-rise">
-        The permissions tables aren't there yet. Apply
-        <code> supabase/migrations/010_owner_role.sql</code> and
-        <code> 011_rbac.sql</code>, then reload. Until then everyone keeps the access
-        they had before.
+        {ready
+          ? "Make yourself the owner above to manage roles and permissions."
+          : "The permissions tables aren't there yet. Apply 010_owner_role.sql and 011_rbac.sql, then reload — until then everyone keeps the access they had before."}
       </p>
     ) : (
       <>
@@ -204,6 +211,21 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
 </AppLayout>
 
 <style>
+  .bootstrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+  .bootstrap__sql {
+    max-width: 100%;
+    padding: var(--space-12) var(--space-16);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-caption);
+    line-height: var(--lh-body);
+    overflow-x: auto;
+  }
+
   .sec__title {
     margin-block-end: var(--space-8);
     font-family: var(--font-display);

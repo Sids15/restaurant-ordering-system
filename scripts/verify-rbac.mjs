@@ -84,14 +84,22 @@ const rpc = await fetch(`${url}/rest/v1/rpc/has_permission`, {
   headers: { ...anon, "content-type": "application/json" },
   body: JSON.stringify({ perm: "menu.manage" }),
 });
-if (rpc.status === 404 || rpc.status === 403) {
-  ok("has_permission() is not callable by anon", true, `HTTP ${rpc.status} — locked down`);
+const rpcBody = await rpc.json().catch(() => null);
+// 012 revokes EXECUTE from anon, so the best outcome is the call being refused
+// outright — Postgres 42501. If the function is still reachable, it must at
+// least answer false; NULL is the hole 012 closes.
+const refused =
+  rpc.status === 401 ||
+  rpc.status === 403 ||
+  rpc.status === 404 ||
+  rpcBody?.code === "42501";
+if (refused) {
+  ok("has_permission() is not callable by anon", true, "execute revoked");
 } else {
-  const value = await rpc.json().catch(() => null);
   ok(
     "has_permission() returns false, not null",
-    value === false,
-    `returned ${JSON.stringify(value)}${value === null ? " — apply 012_has_permission_null.sql" : ""}`,
+    rpcBody === false,
+    `returned ${JSON.stringify(rpcBody)}${rpcBody === null ? " — apply 012_has_permission_null.sql" : ""}`,
   );
 }
 
