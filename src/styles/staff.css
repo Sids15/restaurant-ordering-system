@@ -9,6 +9,10 @@
 .stlayout {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
+  /* vh first, dvh second: a browser that does not know dvh keeps the vh, and
+     one that does overrides it. Without the fallback the declaration is
+     dropped entirely and the element loses its height. */
+  min-height: 100vh;
   min-height: 100dvh;
 }
 
@@ -25,6 +29,7 @@
   position: sticky;
   top: 0;
   align-self: start;
+  height: 100vh;
   height: 100dvh;
   overflow-y: auto;
 }

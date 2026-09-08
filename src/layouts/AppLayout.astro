@@ -47,6 +47,8 @@ const brandVars = `--brand-accent:${brand.accent};--radius-base:${RADIUS[brand.r
 
 <style>
   .app {
+    /* vh fallback first — see the note in staff.css. */
+    min-height: 100vh;
     min-height: 100svh;
     background-color: var(--surface);
     color: var(--ink);

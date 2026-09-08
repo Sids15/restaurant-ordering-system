@@ -6,6 +6,7 @@
  * the service-role client from order creation, or the authenticated staff
  * client from the billing surfaces.
  */
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TabStatus } from "../types";
 import { computeBill, type BillTotals } from "../billing";
@@ -20,7 +21,7 @@ export interface OpenTab {
   token: string;
 }
 
-/** A hard-to-guess session token for a tab. */
+/** A hard-to-guess session token for a device. 192 bits from a CSPRNG. */
 export function generateSessionToken(): string {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -28,10 +29,41 @@ export function generateSessionToken(): string {
 }
 
 /**
+ * What gets STORED for a token. The guest's cookie holds the token; the
+ * database only ever sees this, so a staff account reading the tables cannot
+ * lift a live session (015_hash_session_tokens.sql).
+ *
+ * No salt, no stretching, deliberately: the token is already 192 bits of
+ * randomness, so there is no dictionary to defend against, and a per-row salt
+ * would make the single lookup-by-value every guest request performs
+ * impossible. SHA-256 is right for proving possession of an unguessable secret;
+ * it would be wrong for a password.
+ */
+export function hashSessionToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/** Bind one device to a tab and hand back its token, or null if it didn't take. */
+async function bindDevice(
+  supabase: SupabaseClient,
+  tabId: string,
+): Promise<string | null> {
+  const token = generateSessionToken();
+  const { error } = await supabase
+    .from("tab_sessions")
+    .insert({ tab_id: tabId, token_hash: hashSessionToken(token) });
+  return error ? null : token;
+}
+
+/**
  * The open tab for a table — reusing the existing one or opening a fresh one —
- * always with a session token (backfilled for a legacy tab that lacks one).
- * Null only when there's no table (a standalone order). Race-safe on the
- * one-open-tab-per-table unique index.
+ * and a session token for the device that asked. Null only when there's no
+ * table (a standalone order). Race-safe on the one-open-tab-per-table index.
+ *
+ * Every caller gets its OWN token now, rather than being handed whatever token
+ * the table already had. Two guests at one table each bind their own device to
+ * the same tab, so they share a bill without sharing a credential — and the
+ * second to scan no longer signs the first one out.
  */
 export async function openOrJoinTab(
   supabase: SupabaseClient,
@@ -41,46 +73,61 @@ export async function openOrJoinTab(
 
   const existing = await findOpenTab(supabase, tableLabel);
   if (existing) {
-    if (existing.token) return existing;
-    const token = generateSessionToken();
-    await supabase.from("tabs").update({ session_token: token }).eq("id", existing.tabId);
-    return { ...existing, token };
+    const token = await bindDevice(supabase, existing.tabId);
+    return token ? { ...existing, token } : null;
   }
 
-  const token = generateSessionToken();
   const { data: created, error } = await supabase
     .from("tabs")
-    .insert({ table_label: tableLabel, status: "open", session_token: token })
+    .insert({ table_label: tableLabel, status: "open" })
     .select("id, table_label")
     .single();
 
   if (!error && created) {
-    return { tabId: created.id as string, table_label: created.table_label as string, token };
+    const tabId = created.id as string;
+    const token = await bindDevice(supabase, tabId);
+    return token
+      ? { tabId, table_label: created.table_label as string, token }
+      : null;
   }
 
-  // 23505 = another round opened the tab first; re-read the winner.
+  // 23505 = another round opened the tab first; join the winner.
   if ((error as { code?: string } | null)?.code === "23505") {
-    return findOpenTab(supabase, tableLabel);
+    const winner = await findOpenTab(supabase, tableLabel);
+    if (!winner) return null;
+    const token = await bindDevice(supabase, winner.tabId);
+    return token ? { ...winner, token } : null;
   }
   return null;
 }
 
+/**
+ * The open tab at a table, if any. Carries no token — tokens belong to devices
+ * now, and handing back an existing guest's session is exactly the
+ * impersonation 015 removes.
+ */
 async function findOpenTab(
   supabase: SupabaseClient,
   tableLabel: string,
-): Promise<OpenTab | null> {
+): Promise<{ tabId: string; table_label: string } | null> {
   const { data } = await supabase
     .from("tabs")
-    .select("id, table_label, session_token")
+    .select("id, table_label")
     .eq("table_label", tableLabel)
     .eq("status", "open")
     .maybeSingle();
   if (!data) return null;
-  return {
-    tabId: data.id as string,
-    table_label: data.table_label as string,
-    token: (data.session_token as string | null) ?? "",
-  };
+  return { tabId: data.id as string, table_label: data.table_label as string };
+}
+
+/**
+ * Unbind every device on a tab. Called when a tab stops being orderable — paid,
+ * or merged away — so a settled table cannot keep sending rounds. The rows are
+ * deleted rather than flagged: there is nothing worth keeping about a dead
+ * credential, and ON DELETE CASCADE means a removed tab takes them anyway.
+ */
+async function unbindDevices(supabase: SupabaseClient, tabId: string): Promise<void> {
+  await supabase.from("tab_sessions").delete().eq("tab_id", tabId);
 }
 
 // --- Billing (staff surfaces) ------------------------------------------------
@@ -216,19 +263,21 @@ export async function closeTab(
   if (!tab) return { ok: false, error: "Tab not found." };
   if (tab.status === "closed") return { ok: true };
 
-  // Clearing the token kills every device bound to this tab.
   const { error } = await supabase
     .from("tabs")
     .update({
       status: "closed",
       closed_at: new Date().toISOString(),
       closed_by: byUserId,
-      session_token: null,
     })
     .eq("id", tabId)
     .eq("status", "open");
 
   if (error) return { ok: false, error: "Couldn't close the tab — please retry." };
+
+  // Only after the tab is actually closed: unbinding first would leave a live
+  // tab nobody could order on if the update then failed.
+  await unbindDevices(supabase, tabId);
   return { ok: true };
 }
 
@@ -305,19 +354,23 @@ export async function mergeTab(
     .eq("tab_id", src.tabId);
   if (moveErr) return { ok: false, error: "Couldn't merge the tables — please retry." };
 
-  // Retire the source tab: merged, not paid. Clearing the token unbinds its
-  // devices; merged_into records which bill it folded into.
+  // Retire the source tab: merged, not paid. merged_into records which bill it
+  // folded into.
   const { error: mergeErr } = await supabase
     .from("tabs")
     .update({
       status: "merged",
       merged_into: tabId,
       closed_at: new Date().toISOString(),
-      session_token: null,
     })
     .eq("id", src.tabId)
     .eq("status", "open");
   if (mergeErr) return { ok: false, error: "Couldn't merge the tables — please retry." };
 
+  // The absorbed table's devices FOLLOW the bill. Their rounds moved to the
+  // surviving tab, so their phones should too: merging two tables means the
+  // guests keep ordering, now onto one bill. Kicking them off would make a
+  // merge feel like a punishment for asking to pay together.
+  await supabase.from('tab_sessions').update({ tab_id: tabId }).eq('tab_id', src.tabId);
   return { ok: true };
 }

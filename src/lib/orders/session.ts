@@ -7,7 +7,7 @@
  */
 import type { AstroCookies } from "astro";
 import { supabaseAdmin } from "../supabase/admin";
-import { openOrJoinTab, type OpenTab } from "./tabs";
+import { openOrJoinTab, hashSessionToken, type OpenTab } from "./tabs";
 import { verifyTableToken } from "./table-token";
 
 export const TAB_COOKIE = "berlin_tab";
@@ -23,15 +23,19 @@ export async function currentSession(cookies: AstroCookies): Promise<TabSession 
   const token = cookies.get(TAB_COOKIE)?.value;
   if (!token) return null;
 
+  // Resolve the cookie through the hash of its token: the database never sees
+  // the token itself (015_hash_session_tokens.sql). The join carries the tab's
+  // status so a closed or merged tab stops ordering even if the row survived.
   const { data } = await supabaseAdmin()
-    .from("tabs")
-    .select("id, table_label, status")
-    .eq("session_token", token)
-    .eq("status", "open")
+    .from("tab_sessions")
+    .select("tab_id, tabs!inner ( id, table_label, status )")
+    .eq("token_hash", hashSessionToken(token))
+    .eq("tabs.status", "open")
     .maybeSingle();
 
-  if (!data) return null;
-  return { tabId: data.id as string, table_label: data.table_label as string };
+  const tab = (data as { tabs?: { id: string; table_label: string } } | null)?.tabs;
+  if (!tab) return null;
+  return { tabId: tab.id, table_label: tab.table_label };
 }
 
 function setTabCookie(cookies: AstroCookies, token: string): void {
