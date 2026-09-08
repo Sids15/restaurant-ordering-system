@@ -12,10 +12,18 @@
  */
 import { brand } from "../../data/brand";
 
-/** A day's half-open range: `start <= t < end`, both UTC instants. */
-export interface DayRange {
+/**
+ * Any span of trading time, half-open: `start <= t < end`, both UTC instants.
+ * A single day and a multi-week range are the same shape, so everything that
+ * reports on a span takes this rather than a day specifically.
+ */
+export interface Period {
   start: Date;
   end: Date;
+}
+
+/** A day's half-open range: `start <= t < end`, both UTC instants. */
+export interface DayRange extends Period {
   /** The civil date this range covers, as YYYY-MM-DD in the restaurant's zone. */
   key: string;
 }
@@ -95,10 +103,8 @@ export function dayLabel(key: string, timeZone = brand.timezone): string {
 
 // --- Months (for the day picker) ---------------------------------------------
 
-/** A month's half-open range: `start <= t < end`, both UTC instants. */
-export interface MonthRange {
-  start: Date;
-  end: Date;
+/** A month's half-open range. */
+export interface MonthRange extends Period {
   /** YYYY-MM in the restaurant's zone. */
   key: string;
 }
@@ -187,4 +193,74 @@ export function monthGrid(monthKey: string, timeZone = brand.timezone): DayCell[
     });
   }
   return cells;
+}
+
+// --- Arbitrary date ranges ---------------------------------------------------
+
+/** A span the manager chose: two civil dates, inclusive of both. */
+export interface DateRange extends Period {
+  from: string;
+  to: string;
+}
+
+/**
+ * Midnight on `from` to midnight after `to`, inclusive of both days.
+ *
+ * The two keys are sorted, so picking the end of a range before its start still
+ * gives the span the manager plainly meant rather than an empty result.
+ */
+export function dateRange(fromKey: string, toKey: string, timeZone = brand.timezone): DateRange {
+  const [from, to] = fromKey <= toKey ? [fromKey, toKey] : [toKey, fromKey];
+  return {
+    from,
+    to,
+    start: dayRange(from, timeZone).start,
+    // The END of the last day, which is the start of the day after it.
+    end: dayRange(nextDay(to), timeZone).start,
+  };
+}
+
+/** The civil date after `key`. */
+export function nextDay(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+/** Whole days in an inclusive range. */
+export function daysBetween(fromKey: string, toKey: string): number {
+  const at = (k: string) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.abs(Math.round((at(toKey) - at(fromKey)) / 86_400_000)) + 1;
+}
+
+/**
+ * A readable span: "1 – 7 Sept", "28 Aug – 3 Sept", "24 Dec 2025 – 2 Jan 2026".
+ * Shared month and year are stated once, at the end, where they read naturally.
+ */
+export function rangeLabel(fromKey: string, toKey: string, timeZone = brand.timezone): string {
+  const [a, b] = fromKey <= toKey ? [fromKey, toKey] : [toKey, fromKey];
+  if (a === b) return dayLabel(a, timeZone);
+
+  const part = (key: string, opts: Intl.DateTimeFormatOptions) => {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Intl.DateTimeFormat("en-IN", { timeZone, ...opts }).format(
+      new Date(Date.UTC(y, m - 1, d, 12)),
+    );
+  };
+  const sameYear = a.slice(0, 4) === b.slice(0, 4);
+  const sameMonth = sameYear && a.slice(0, 7) === b.slice(0, 7);
+  const thisYear = a.slice(0, 4) === localDateKey(undefined, timeZone).slice(0, 4);
+
+  const tail: Intl.DateTimeFormatOptions =
+    sameYear && thisYear ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" };
+
+  const head: Intl.DateTimeFormatOptions = sameMonth
+    ? { day: "numeric" }
+    : sameYear
+      ? { day: "numeric", month: "short" }
+      : { day: "numeric", month: "short", year: "numeric" };
+
+  return `${part(a, head)} – ${part(b, tail)}`;
 }

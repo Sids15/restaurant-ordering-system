@@ -7,7 +7,7 @@
  * manager can see it happened, but never in a figure.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { localDateKey, type DayRange, type MonthRange } from "./day";
+import { localDateKey, type Period } from "./day";
 import type { TabStatus } from "../types";
 import { ASSIGNED_EMBED, type Assignee } from "./assign";
 import { selectOptional } from "../supabase/optional-columns";
@@ -94,14 +94,17 @@ function tabRow(t: Record<string, unknown>, dayStart?: Date): DayTab {
 
 export async function getDaySummary(
   supabase: SupabaseClient,
-  range: DayRange,
+  range: Period,
 ): Promise<DaySummary> {
   const from = range.start.toISOString();
   const to = range.end.toISOString();
 
-  // Today carries yesterday's stragglers; a past day is closed and shows only
-  // what it actually held.
-  const isToday = range.key === localDateKey();
+  // A period that runs up to now carries the stragglers still open from before
+  // it; a period that has already closed shows only what it actually held.
+  // Derived from the bounds rather than a date key so this holds for a single
+  // day and for a range across weeks alike.
+  const now = Date.now();
+  const isToday = range.start.getTime() <= now && now < range.end.getTime();
 
   const [ordersRes, openRes, closedRes] = await Promise.all([
     selectOptional<Record<string, unknown>[]>(
@@ -166,7 +169,7 @@ export async function getDaySummary(
   };
 }
 
-// --- Month activity (the day picker's dots) ----------------------------------
+// --- Per-day totals ----------------------------------------------------------
 
 export interface DayActivity {
   orders: number;
@@ -174,19 +177,20 @@ export interface DayActivity {
 }
 
 /**
- * Which days in a month actually traded, and for how much.
+ * Which days in a period actually traded, and for how much.
  *
- * Powers the dots in the day picker, so a manager can see at a glance which
- * days are worth opening — and spot a day that should have traded and didn't.
+ * Two callers: the dots in the day picker, so a manager can see at a glance
+ * which days are worth opening (and spot a day that should have traded and
+ * didn't), and the day-by-day breakdown of a selected range.
  * Grouped in the restaurant's zone, not UTC, for the same reason the day
  * boundaries are (lib/orders/day.ts): a 00:30 bill belongs to the night it was
  * taken, not to the next morning.
  *
  * Cancelled rounds count toward neither figure, matching getDaySummary.
  */
-export async function getMonthActivity(
+export async function getDailyTotals(
   supabase: SupabaseClient,
-  range: MonthRange,
+  range: Period,
   timeZone?: string,
 ): Promise<Map<string, DayActivity>> {
   const { data, error } = await supabase

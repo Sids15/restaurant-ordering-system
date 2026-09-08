@@ -1,10 +1,14 @@
 ---
 /**
- * Today — the manager's view of a trading day: what was taken, which tabs are
- * still open, and which closed. Manager only (lib/auth/access.ts).
+ * Today — the manager's view of trading: what was taken, which tabs are still
+ * open, and which closed. Manager only (lib/auth/access.ts).
  *
- * `?date=YYYY-MM-DD` looks at another day; the boundary is resolved in the
- * restaurant's timezone, not the server's (lib/orders/day.ts).
+ * Reads one span of time, chosen by the URL:
+ *   ?date=YYYY-MM-DD            one day (the default is today)
+ *   ?from=YYYY-MM-DD&to=…       a range, inclusive of both days
+ *
+ * All boundaries resolve in the restaurant's timezone, not the server's
+ * (lib/orders/day.ts) — Vercel runs UTC, which is 5:30 out.
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import StationMasthead from "../../components/staff/StationMasthead.astro";
@@ -12,6 +16,9 @@ import StationShell from "../../components/staff/StationShell.astro";
 import {
   dayRange,
   dayLabel,
+  dateRange,
+  rangeLabel,
+  daysBetween,
   localDateKey,
   monthRange,
   monthKeyOf,
@@ -19,7 +26,7 @@ import {
   monthGrid,
   shiftMonth,
 } from "../../lib/orders/day";
-import { getDaySummary, getMonthActivity } from "../../lib/orders/manager";
+import { getDaySummary, getDailyTotals } from "../../lib/orders/manager";
 import { assigneeName } from "../../lib/orders/assign";
 import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
@@ -30,33 +37,107 @@ export const prerender = false;
 const { supabase, profile } = Astro.locals;
 if (profile!.role !== "manager") return Astro.redirect("/staff", 302);
 
-const range = dayRange(Astro.url.searchParams.get("date") ?? undefined);
-const day = await getDaySummary(supabase, range);
-const label = dayLabel(range.key);
-
+const sp = Astro.url.searchParams;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const today = localDateKey();
-const shift = (days: number): string => {
-  const [y, m, d] = range.key.split("-").map(Number);
-  const at = new Date(Date.UTC(y, m - 1, d + days, 12));
-  return at.toISOString().slice(0, 10);
+const clamp = (key: string) => (key > today ? today : key);
+
+/** Shift a date key by whole days. */
+const shiftDay = (key: string, by: number): string => {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + by, 12)).toISOString().slice(0, 10);
 };
-const prevKey = shift(-1);
-const nextKey = shift(1);
-const atToday = range.key === today;
+
+const rawFrom = sp.get("from");
+const rawTo = sp.get("to");
+const isRange = Boolean(rawFrom && rawTo && DATE.test(rawFrom) && DATE.test(rawTo));
+
+// The period under review. A day and a range are the same shape downstream, so
+// every figure on the page is computed once, from this.
+const period = isRange
+  ? dateRange(clamp(rawFrom!), clamp(rawTo!))
+  : dayRange(sp.get("date") ?? undefined);
+const from = isRange ? (period as { from: string }).from : (period as { key: string }).key;
+const to = isRange ? (period as { to: string }).to : from;
+
+const day = await getDaySummary(supabase, period);
+const label = isRange ? rangeLabel(from, to) : dayLabel(from);
+const span = daysBetween(from, to);
+
+// Stepping moves by the width of what you are looking at: a day at a time on a
+// day, a week at a time on a week. Never past today.
+const prevHref = isRange
+  ? `/staff/today?from=${shiftDay(from, -span)}&to=${shiftDay(to, -span)}`
+  : `/staff/today?date=${shiftDay(from, -1)}`;
+const nextFrom = shiftDay(from, span);
+const nextTo = shiftDay(to, span);
+const atEnd = to >= today;
+const nextHref = isRange
+  ? `/staff/today?from=${clamp(nextFrom)}&to=${clamp(nextTo)}`
+  : `/staff/today?date=${nextFrom}`;
+const atToday = !isRange && from === today;
 
 // --- The day picker -------------------------------------------------------
-// `?month=` decides which month the picker shows, independently of `?date=`.
-// Paging months is therefore a plain link, and its presence is what holds the
-// popover open across the reload — so month navigation needs no JavaScript.
-const monthParam = Astro.url.searchParams.get("month");
-const viewMonth = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : monthKeyOf(range.key);
+// `?month=` decides which month the picker shows, independently of the period
+// being viewed. Paging months is therefore a plain link, and the presence of
+// that parameter is what holds the popover open across the reload — so the
+// whole picker, range selection included, works with JavaScript off.
+const monthParam = sp.get("month");
+const viewMonth = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : monthKeyOf(to);
 const cells = monthGrid(viewMonth);
-const activity = await getMonthActivity(supabase, monthRange(viewMonth));
+const activity = await getDailyTotals(supabase, monthRange(viewMonth));
 const thisMonth = monthKeyOf(today);
 
-/** Page the calendar without losing the day you are looking at. */
-const monthHref = (key: string) => `/staff/today?date=${range.key}&month=${key}`;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Range selection is two clicks. The first lands `?from=` with no `?to=`, which
+// is the "now pick the other end" state; the second completes it. dateRange()
+// sorts the pair, so clicking the earlier day second still works.
+const picking = sp.get("pick") === "range";
+const pendingFrom = picking && rawFrom && DATE.test(rawFrom) && !rawTo ? rawFrom : null;
+
+/** Where a square in the grid goes when clicked. */
+const dayHref = (key: string): string =>
+  pendingFrom
+    ? `/staff/today?from=${pendingFrom}&to=${key}`
+    : picking
+      ? `/staff/today?from=${key}&pick=range&month=${viewMonth}`
+      : `/staff/today?date=${key}`;
+
+/**
+ * Page the calendar without losing what you were doing: the period you are
+ * viewing, or a half-finished range selection.
+ */
+const monthHref = (key: string): string => {
+  const state = pendingFrom
+    ? `from=${pendingFrom}&pick=range`
+    : isRange
+      ? `from=${from}&to=${to}${picking ? "&pick=range" : ""}`
+      : `date=${from}${picking ? "&pick=range" : ""}`;
+  return `/staff/today?${state}&month=${key}`;
+};
+
+/** One-click spans a manager actually asks for. */
+const presets = [
+  { label: "Last 7 days", from: shiftDay(today, -6), to: today },
+  { label: "Last 30 days", from: shiftDay(today, -29), to: today },
+  { label: "This month", from: `${thisMonth}-01`, to: today },
+  {
+    label: "Last month",
+    from: `${shiftMonth(thisMonth, -1)}-01`,
+    to: shiftDay(`${thisMonth}-01`, -1),
+  },
+];
+
+// The day-by-day breakdown a range gets instead of a flat order list: thirty
+// days of individual rounds is not scannable, but thirty daily figures are.
+const breakdown = isRange
+  ? [...(await getDailyTotals(supabase, period)).entries()]
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([key, v]) => ({ key, ...v }))
+  : [];
+const bestDay = breakdown.reduce(
+  (best, d) => (best === null || d.takings > best.takings ? d : best),
+  null as (typeof breakdown)[number] | null,
+);
 
 function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-IN", {
@@ -66,20 +147,21 @@ function clock(iso: string): string {
   });
 }
 
-/** "3 Sept, 01:36" — for a tab that opened on an earlier day, where a bare
- *  time would read as this morning. */
+/** "3 Sept, 01:36" — for a tab that opened before the period being viewed. */
 function stamp(iso: string): string {
   const d = new Date(iso);
-  const day = d.toLocaleDateString("en-IN", {
+  const dayPart = d.toLocaleDateString("en-IN", {
     timeZone: brand.timezone,
     day: "numeric",
     month: "short",
   });
-  return `${day}, ${clock(iso)}`;
+  return `${dayPart}, ${clock(iso)}`;
 }
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 ---
 
-<AppLayout title={`Today — ${brand.name}`}>
+<AppLayout title={`${label} — ${brand.name}`}>
   <StationShell
     role={profile!.role}
     name={profile!.name}
@@ -88,14 +170,14 @@ function stamp(iso: string): string {
   >
     <StationMasthead title={label}>
       <div class="daynav" slot="actions">
-        <a class="daynav__step" href={`/staff/today?date=${prevKey}`} rel="prev">
+        <a class="daynav__step" href={prevHref} rel="prev">
           <span aria-hidden="true">←</span>
           <span class="visually-hidden">Previous day</span>
         </a>
 
         <details class="cal" open={Boolean(monthParam)}>
           <summary class="cal__toggle">
-            <span>Pick a day</span>
+            <span>{pendingFrom ? "Pick the other day" : isRange ? "Change range" : "Pick a day"}</span>
             <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
               <path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
             </svg>
@@ -123,9 +205,13 @@ function stamp(iso: string): string {
               {
                 cells.map((c) => {
                   const took = activity.get(c.key);
-                  const label = took
-                    ? `${dayLabel(c.key)} — ${formatINR(took.takings)} from ${took.orders} ${took.orders === 1 ? "order" : "orders"}`
-                    : `${dayLabel(c.key)} — nothing taken`;
+                  const money = took
+                    ? `${formatINR(took.takings)} from ${took.orders} ${took.orders === 1 ? "order" : "orders"}`
+                    : "nothing taken";
+                  const title = `${dayLabel(c.key)} — ${money}`;
+                  // An end selected, a range chosen, or a day inside it.
+                  const isEnd = c.key === from || c.key === to || c.key === pendingFrom;
+                  const inSpan = !isEnd && c.key > from && c.key < to;
                   return c.future ? (
                     <span class="cal__day cal__day--off" aria-hidden="true">{c.day}</span>
                   ) : (
@@ -134,12 +220,13 @@ function stamp(iso: string): string {
                         "cal__day",
                         !c.inMonth && "cal__day--outside",
                         c.today && "cal__day--today",
-                        c.key === range.key && "cal__day--on",
+                        inSpan && "cal__day--span",
+                        isEnd && "cal__day--on",
                       ]}
-                      href={`/staff/today?date=${c.key}`}
-                      aria-current={c.key === range.key ? "date" : undefined}
-                      aria-label={label}
-                      title={label}
+                      href={dayHref(c.key)}
+                      aria-current={isEnd ? "date" : undefined}
+                      aria-label={pendingFrom ? `End the range on ${title}` : title}
+                      title={title}
                     >
                       {c.day}
                       {took && <span class="cal__dot" aria-hidden="true"></span>}
@@ -149,15 +236,40 @@ function stamp(iso: string): string {
               }
             </div>
 
-            <a class="cal__jump" href="/staff/today">Jump to today</a>
+            <div class="cal__foot">
+              {
+                pendingFrom ? (
+                  <p class="cal__hint">
+                    From <strong>{dayLabel(pendingFrom)}</strong> — now pick the other end.
+                    <a href={`/staff/today?date=${pendingFrom}`}>Cancel</a>
+                  </p>
+                ) : (
+                  <>
+                    <div class="cal__presets">
+                      {presets.map((r) => (
+                        <a class="cal__preset" href={`/staff/today?from=${r.from}&to=${r.to}`}>
+                          {r.label}
+                        </a>
+                      ))}
+                    </div>
+                    <div class="cal__modes">
+                      <a class="cal__jump" href="/staff/today">Jump to today</a>
+                      <a class="cal__jump" href={`/staff/today?pick=range&month=${viewMonth}`}>
+                        Pick a range
+                      </a>
+                    </div>
+                  </>
+                )
+              }
+            </div>
           </div>
         </details>
 
         {!atToday && <a class="daynav__today" href="/staff/today">Today</a>}
         <a
           class="daynav__step"
-          href={atToday ? undefined : `/staff/today?date=${nextKey}`}
-          aria-disabled={atToday ? "true" : undefined}
+          href={atEnd ? undefined : nextHref}
+          aria-disabled={atEnd ? "true" : undefined}
           rel="next"
         >
           <span aria-hidden="true">→</span>
@@ -205,7 +317,7 @@ function stamp(iso: string): string {
     <section class="st-rise-2" aria-labelledby="tabs-h">
       <h2 class="sec__title" id="tabs-h">Tabs</h2>
       {day.openTabs.length === 0 && day.closedTabs.length === 0 ? (
-        <p class="st-empty">No tabs opened on this day.</p>
+        <p class="st-empty">No tabs opened in this {isRange ? "range" : "day"}.</p>
       ) : (
         <ul class="rows">
           {day.openTabs.map((t) => (
@@ -242,10 +354,45 @@ function stamp(iso: string): string {
       )}
     </section>
 
+    {/* A range gets its days, not its individual rounds: thirty days of
+        rounds is a wall, thirty daily figures is a report you can read. Each
+        day links through to itself. */}
+    {isRange && (
+      <section class="st-rise-2" aria-labelledby="days-h">
+        <h2 class="sec__title" id="days-h">By day</h2>
+        {breakdown.length === 0 ? (
+          <p class="st-empty">Nothing was taken in this range.</p>
+        ) : (
+          <ul class="rows">
+            {breakdown.map((d) => (
+              <li class="row">
+                <a class="row__main" href={`/staff/today?date=${d.key}`}>
+                  <span class="row__title">{dayLabel(d.key)}</span>
+                  <span class="row__meta">
+                    {d.orders} {d.orders === 1 ? "order" : "orders"}
+                    {bestDay && d.key === bestDay.key && breakdown.length > 1 && (
+                      <span class="row__best"> · best day</span>
+                    )}
+                  </span>
+                </a>
+                <span class="row__amount">{formatINR(d.takings)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p class="st-note">
+          {span} {span === 1 ? "day" : "days"} ·{" "}
+          {breakdown.length} {breakdown.length === 1 ? "day traded" : "days traded"} ·{" "}
+          average {formatINR(Math.round(day.totals.takings / Math.max(1, breakdown.length)))} on a
+          day that traded
+        </p>
+      </section>
+    )}
+
     <section class="st-rise-2" aria-labelledby="orders-h">
       <h2 class="sec__title" id="orders-h">Orders</h2>
       {day.orders.length === 0 ? (
-        <p class="st-empty">No orders on this day.</p>
+        <p class="st-empty">{isRange ? "No orders in this range." : "No orders on this day."}</p>
       ) : (
         <ul class="rows">
           {day.orders.map((o) => (
@@ -253,7 +400,7 @@ function stamp(iso: string): string {
               <a class="row__main" href={`/staff?code=${o.code}`}>
                 <span class="row__title">{o.code}</span>
                 <span class="row__meta">
-                  {clock(o.created_at)} ·{" "}
+                  {isRange ? stamp(o.created_at) : clock(o.created_at)} ·{" "}
                   {o.table_label ? `Table ${o.table_label}` : "No table"} ·{" "}
                   {o.source === "customer" ? "Guest" : "Server"}
                   {/* A void is the one action that makes money disappear, so
@@ -490,15 +637,77 @@ function stamp(iso: string): string {
     background: var(--on-accent);
   }
 
-  .cal__jump {
-    display: block;
+  /* Days between the two ends of a chosen range. Tinted, not filled, so the
+     two endpoints stay the emphasis. */
+  .cal__day--span {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 0;
+  }
+
+  .cal__foot {
     margin-block-start: var(--space-12);
     padding-block-start: var(--space-12);
     border-top: 1px solid var(--border);
+  }
+  .cal__presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+  .cal__preset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding-inline: var(--space-8);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+    text-align: center;
+    transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .cal__preset:hover {
+    color: var(--ink);
+    background: var(--surface-sunken);
+  }
+  .cal__modes {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-8);
+    margin-block-start: var(--space-8);
+    padding-block-start: var(--space-8);
+    border-top: 1px solid var(--border);
+  }
+  .cal__hint {
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+  .cal__hint strong {
+    color: var(--ink);
+  }
+  .cal__hint a {
+    display: block;
+    margin-block-start: var(--space-8);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .row__best {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .st-note {
+    margin-block-start: var(--space-12);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+
+  .cal__jump {
     font-size: var(--fs-caption);
     font-weight: 600;
     color: var(--accent);
-    text-align: center;
   }
 
   @media (max-width: 36rem) {
