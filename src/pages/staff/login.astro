@@ -402,7 +402,8 @@ const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;
     .login__head,
     .login__form,
     .login__foot {
-      animation: login-rise var(--dur-reveal) var(--ease-out) both;
+      /* backwards, not both — see the note on st-rise in staff.css. */
+      animation: login-rise var(--dur-reveal) var(--ease-out) backwards;
     }
     .login__aside-brand {
       animation-delay: 90ms;

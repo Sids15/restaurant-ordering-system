@@ -8,7 +8,8 @@
   padding: var(--space-24);
   background: var(--accent-soft);
   border-radius: var(--radius-lg);
-  animation: pending-rise var(--dur-reveal) var(--ease-out) both;
+  /* backwards, not both — see the note on st-rise in staff.css. */
+  animation: pending-rise var(--dur-reveal) var(--ease-out) backwards;
 }
 .pending--empty {
   background: transparent;

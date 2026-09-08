@@ -427,14 +427,24 @@
 
 /* --- Entry motion ---------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
+  /* `backwards`, not `both`.
+     An ANIMATED transform always computes to a matrix — even the identity
+     matrix(1,0,0,1,0,0) that `translateY(0)` and `none` both produce — and any
+     transform that isn't the `none` keyword makes the element a stacking
+     context. `both` keeps that final matrix applied forever, so every revealed
+     section stayed a stacking context for the life of the page and the masthead
+     could never float a dropdown over the content below it.
+     `backwards` still holds the `from` state through the delay (no flash), but
+     releases the properties when the animation ends, so they revert to the
+     element's own values: opacity 1, transform none, no stacking context. */
   .st-rise {
-    animation: st-rise var(--dur-reveal) var(--ease-out) both;
+    animation: st-rise var(--dur-reveal) var(--ease-out) backwards;
   }
   .st-rise-2 {
-    animation: st-rise var(--dur-reveal) var(--ease-out) 90ms both;
+    animation: st-rise var(--dur-reveal) var(--ease-out) 90ms backwards;
   }
   .st-rise-3 {
-    animation: st-rise var(--dur-reveal) var(--ease-out) 180ms both;
+    animation: st-rise var(--dur-reveal) var(--ease-out) 180ms backwards;
   }
   /* `to: transform: none`, NOT translateY(0). They look identical, but any
      transform other than none makes the element a stacking context — and with

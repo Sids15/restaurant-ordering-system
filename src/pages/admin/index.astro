@@ -150,7 +150,9 @@ const OK_COPY: Record<string, string> = {
     border-inline-start: 3px solid var(--accent);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    animation: toast-in 0.5s var(--ease-out) both;
+    /* backwards, not both — see the note on st-rise in staff.css. The toast is
+       its own fixed overlay, so it keeps its z-index either way. */
+    animation: toast-in 0.5s var(--ease-out) backwards;
   }
   .toast--ok {
     border-inline-start-color: var(--status-ready);
