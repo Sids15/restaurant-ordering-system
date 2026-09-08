@@ -1,10 +1,12 @@
 /**
- * verify-rbac — check that access control is actually live in the database.
+ * verify-rbac — check that the database half of the app is actually wired up.
  *
- * The app's own tests (scripts/rbac.test.mjs) cover the rules; this checks the
- * half that only the database can answer: are the tables there, are the grants
- * seeded, is there an owner, and — the one that matters most — does
- * has_permission() REFUSE an anonymous caller rather than returning NULL.
+ * The app's own tests (scripts/rbac.test.mjs) cover the rules. This checks the
+ * half only a live database can answer: are the tables there, are the grants
+ * seeded, is there an owner, does has_permission() REFUSE an anonymous caller
+ * rather than returning NULL, and do the queries the app builds actually
+ * resolve — several of them degrade silently when a migration is missing, so a
+ * whole feature can be absent with nothing reporting an error.
  *
  * That last check is here because it caught a real hole: has_permission()
  * returned NULL for a caller with no profile, PL/pgSQL's IF does not take a
@@ -131,6 +133,57 @@ if (!item) {
     console.log(`        (restored "${item.name}")`);
   }
 }
+
+// --- Schema wiring -----------------------------------------------------------
+// The exact selects the app builds. PostgREST names an embed after the foreign
+// key constraint, and those names were written from Postgres's naming
+// convention rather than read back from the database — so if one is wrong,
+// selectOptional retries WITHOUT the embed, the query succeeds, and the feature
+// simply never appears. A silent fallback is invisible by definition, which is
+// why it is checked here rather than trusted.
+console.log("\nSchema wiring");
+const EMBEDS = [
+  [
+    "server assignment on tabs",
+    "tabs?select=id,table_label,opened_at,orders(subtotal,status),assigned:profiles!tabs_assigned_to_fkey(id,name,role)&limit=1",
+    "008_tab_assignment.sql",
+  ],
+  [
+    "void author on orders",
+    "orders?select=code,status,subtotal,created_at,cancelled_by:profiles!orders_cancelled_by_fkey(id,name,role)&limit=1",
+    "009_cancellation_audit.sql",
+  ],
+  [
+    "analytics order lines",
+    "orders?select=status,source,subtotal,created_at,confirmed_at,tab_id,table_label,order_items(menu_item_id,name_snapshot,price_snapshot,qty)&limit=1",
+    "001_schema.sql",
+  ],
+  [
+    "analytics menu categories",
+    "menu_items?select=id,veg_type,menu_categories(name)&limit=1",
+    "001_schema.sql",
+  ],
+];
+for (const [label, query, migration] of EMBEDS) {
+  const r = await get(query);
+  ok(label, r.status === 200, r.status === 200 ? "" : `HTTP ${r.status} — apply ${migration}`);
+}
+
+// The atomic grant save (013). A service-role caller has no profile, so the
+// owner check must refuse it; an absent function reports PGRST202 instead.
+const setFn = await fetch(`${url}/rest/v1/rpc/set_role_permissions`, {
+  method: "POST",
+  headers: svc,
+  body: JSON.stringify({ grants: {} }),
+});
+const setBody = await setFn.json().catch(() => null);
+const absent =
+  setBody?.code === "PGRST202" || /could not find the function/i.test(setBody?.message ?? "");
+ok(
+  "permission saves are atomic",
+  !absent,
+  absent ? "apply 013_set_grants_atomic.sql" : "set_role_permissions() present and owner-gated",
+);
 
 console.log(bad === 0 ? "\nAccess control is live and holding.\n" : `\n${bad} problem(s) above.\n`);
 process.exit(bad === 0 ? 0 : 1);
