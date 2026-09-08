@@ -57,6 +57,10 @@ export default function MenuApp({ categories, table }: Props) {
   const [cart, setCart] = useState<Cart>({});
   const [sheetOpen, setSheetOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
+  // Nothing is sent until the guest says so twice. A phone gets tapped in a
+  // pocket and handed across a table, and an accidental order is a real round
+  // the kitchen starts cooking and a server has to void.
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Availability, kept live: a dish 86'd in the kitchen drops off the menu.
   // Starts as every item (matches SSR), then the poll narrows it.
@@ -192,6 +196,28 @@ export default function MenuApp({ categories, table }: Props) {
     document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  /**
+   * Un-stick the Place button when the browser hands this page back.
+   *
+   * On success placeOrder deliberately leaves `placing` true and navigates
+   * away, so a double-tap during navigation cannot send a second order. But
+   * pressing Back restores this page from the back-forward cache with its
+   * JavaScript state exactly as it was — `placing` still true — and the button
+   * sits disabled reading "Placing…" forever. It is not a hung request; it is a
+   * page that was never re-created.
+   *
+   * `persisted` is what distinguishes a bfcache restore from a fresh load.
+   */
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setPlacing(false);
+      setConfirming(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
   async function placeOrder() {
     setPlacing(true);
     setError(null);
@@ -218,6 +244,10 @@ export default function MenuApp({ categories, table }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setPlacing(false);
+      // Back to the summary rather than the cart: whatever went wrong, the
+      // guest still wants to send this order, and making them re-confirm from
+      // scratch reads as if it half-worked.
+      setConfirming(true);
     }
   }
 
@@ -320,6 +350,10 @@ export default function MenuApp({ categories, table }: Props) {
           items={allItems}
           subtotal={subtotal}
           placing={placing}
+          table={table}
+          confirming={confirming}
+          onConfirm={() => setConfirming(true)}
+          onCancelConfirm={() => setConfirming(false)}
           error={error}
           onClose={() => setSheetOpen(false)}
           onInc={inc}
@@ -410,6 +444,10 @@ function CartSheet({
   items,
   subtotal,
   placing,
+  table,
+  confirming,
+  onConfirm,
+  onCancelConfirm,
   error,
   onClose,
   onInc,
@@ -421,6 +459,10 @@ function CartSheet({
   items: Record<string, MenuItemData>;
   subtotal: number;
   placing: boolean;
+  table: string | null;
+  confirming: boolean;
+  onConfirm: () => void;
+  onCancelConfirm: () => void;
   error: string | null;
   onClose: () => void;
   onInc: (id: string) => void;
@@ -429,6 +471,7 @@ function CartSheet({
   onPlace: () => void;
 }) {
   const lines = Object.entries(cart).filter(([id]) => items[id]);
+  const count = lines.reduce((n, [, l]) => n + l.qty, 0);
 
   // Close on Escape.
   useEffect(() => {
@@ -484,9 +527,48 @@ function CartSheet({
             Taxes &amp; charges applied on the final bill. Show your code to a server to confirm.
           </p>
           {error && <p className="sheet__error">{error}</p>}
-          <button type="button" className="place" onClick={onPlace} disabled={placing}>
-            {placing ? "Placing…" : "Place order"}
-          </button>
+
+          {confirming ? (
+            <div className="confirm" role="group" aria-label="Confirm your order">
+              <p className="confirm__ask">
+                Send {count} {count === 1 ? "item" : "items"} to the kitchen
+                {table ? ` for table ${table}` : ""}?
+              </p>
+              <p className="confirm__note">
+                The kitchen starts cooking as soon as a server accepts it. Ask a server if
+                you need to change it after that.
+              </p>
+              <div className="confirm__actions">
+                {/* Cancel first in the DOM and on the left: the destructive-ish
+                    action should not be where a thumb lands by default. */}
+                <button
+                  type="button"
+                  className="confirm__back"
+                  onClick={onCancelConfirm}
+                  disabled={placing}
+                >
+                  Not yet
+                </button>
+                <button
+                  type="button"
+                  className="place confirm__go"
+                  onClick={onPlace}
+                  disabled={placing}
+                >
+                  {placing ? "Sending…" : "Yes, send it"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="place"
+              onClick={onConfirm}
+              disabled={placing || count === 0}
+            >
+              Place order
+            </button>
+          )}
         </div>
       </div>
     </div>

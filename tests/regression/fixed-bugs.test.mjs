@@ -253,5 +253,50 @@ suite("REGRESSION · bugs that were real");
   );
 }
 
+// --- The Place button stuck on "Placing…" ------------------------------------
+// placeOrder deliberately leaves `placing` true on success and navigates away,
+// so a double-tap mid-navigation cannot send a second order. But pressing Back
+// restores the page from the back-forward cache with its JavaScript state
+// intact — `placing` still true — and the button sat disabled forever. It was
+// never a hung request; it was a page that was never re-created.
+{
+  const menu = read("src/components/order/MenuApp.tsx");
+  ok(
+    "a bfcache restore resets the placing state",
+    /addEventListener\("pageshow"/.test(menu) && /e\.persisted/.test(menu),
+    "no pageshow/persisted handler — the Place button will stick again after Back",
+  );
+  ok(
+    "...and clears the confirmation step with it",
+    /setPlacing\(false\);[\s\S]{0,80}setConfirming\(false\);/.test(menu),
+    "a restored page could come back mid-confirmation",
+  );
+
+  // Nothing may reach the kitchen on a single tap.
+  ok(
+    "the first tap only asks",
+    /onClick=\{onConfirm\}/.test(menu),
+    "Place order posts directly again — an accidental tap becomes a real round",
+  );
+  ok(
+    "only the confirm actually places",
+    /className="place confirm__go"[\s\S]{0,120}onClick=\{onPlace\}/.test(menu),
+    "the confirm button is not the one that posts",
+  );
+  ok(
+    "an empty cart cannot be sent",
+    /disabled=\{placing \|\| count === 0\}/.test(menu),
+    "the Place button is enabled with nothing in the cart",
+  );
+  ok(
+    "a failed send returns to the summary, not the cart",
+    // Comments stripped: the two calls sit either side of an explanatory
+    // comment, and measuring the gap in raw characters would break the moment
+    // someone reworded it.
+    /setPlacing\(false\);\s*setConfirming\(true\);/.test(stripComments(menu)),
+    "after an error the guest is dropped back to the cart, which reads as if it half-worked",
+  );
+}
+
 note("each of these shipped broken once; the assertions are what stop a repeat");
 finish();

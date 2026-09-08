@@ -602,6 +602,58 @@
   cursor: progress;
 }
 
+/* --- Confirming the order --------------------------------------------------
+   A second, deliberate tap before anything reaches the kitchen. A phone gets
+   tapped in a pocket and handed across a table, and an accidental order is a
+   real round someone starts cooking and a server has to void. */
+.confirm {
+  margin-block-start: var(--space-16);
+  padding: var(--space-16);
+  background: var(--accent-soft);
+  border-radius: var(--radius-md);
+}
+.confirm__ask {
+  font-size: var(--fs-body-l);
+  font-weight: 600;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.confirm__note {
+  margin-block-start: var(--space-4);
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+.confirm__actions {
+  display: grid;
+  /* The confirm is wider than the way out: both are easy to hit, but the one
+     that sends food is the one the thumb lands on. */
+  grid-template-columns: auto 1fr;
+  gap: var(--space-12);
+  margin-block-start: var(--space-16);
+}
+.confirm__back {
+  min-height: var(--btn-height);
+  padding-inline: var(--space-24);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--surface-raised);
+  border-radius: var(--radius-pill);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.confirm__back:hover:not(:disabled) {
+  color: var(--ink);
+}
+.confirm__back:disabled {
+  opacity: 0.5;
+}
+/* It already sits inside .confirm's own spacing. */
+.confirm__go {
+  margin-block-start: 0;
+}
+
 /* --- Wider than a phone: let the layout breathe --------------------------- */
 @media (min-width: 48rem) {
   .dish {
