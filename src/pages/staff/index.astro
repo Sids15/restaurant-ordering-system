@@ -14,9 +14,10 @@ import { formatINR } from "../../lib/money";
 import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 
+import { can } from "../../lib/auth/access";
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
+const { supabase, profile, grants } = Astro.locals;
 const params = Astro.url.searchParams;
 
 const rawCode = (params.get("code") ?? "").trim().toUpperCase();
@@ -26,7 +27,10 @@ const err = params.get("err");
 const order = rawCode ? await getStaffOrder(supabase, rawCode) : null;
 const notFound = rawCode !== "" && !order;
 
-const canTake = profile!.role === "manager" || profile!.role === "server";
+// The desk shows an order to anyone who may see one, but only offers the
+// buttons for capabilities this account actually holds.
+const canTake = can(grants, "orders.take");
+const canVoid = can(grants, "orders.void");
 // The pending queue (notification) is only meaningful to roles that confirm.
 const pending = canTake ? await getPendingOrders(supabase) : [];
 const STATUS_LABEL: Record<string, string> = {
@@ -55,6 +59,7 @@ function when(iso: string): string {
 <AppLayout title={`Staff console — ${brand.name}`}>
   <StationShell
     role={profile!.role}
+    grants={grants}
     name={profile!.name}
     pathname={Astro.url.pathname}
     counts={{ "/staff": pending.length }}
@@ -152,8 +157,9 @@ function when(iso: string): string {
           {order.tab_id && <a class="docket__link" href={`/staff/tabs/${order.tab_id}`}>Bill · Table {order.table_label}</a>}
         </div>
 
-        {canTake && order.status === "pending" && (
+        {(canTake || canVoid) && order.status === "pending" && (
           <div class="actions">
+            {canTake && (
             <form method="post" action={`/api/staff/orders/${order.code}`}>
               <input type="hidden" name="action" value="confirm" />
               <button class="st-btn st-btn--primary actions__confirm" type="submit">
@@ -163,14 +169,17 @@ function when(iso: string): string {
                 </svg>
               </button>
             </form>
+            )}
+            {canVoid && (
             <form method="post" action={`/api/staff/orders/${order.code}`}>
               <input type="hidden" name="action" value="cancel" />
               <button class="st-btn st-btn--ghost" type="submit">Cancel</button>
             </form>
+            )}
           </div>
         )}
 
-        {canTake && order.status === "confirmed" && (
+        {canVoid && order.status === "confirmed" && (
           <div class="actions">
             <p class="actions__done">Confirmed. The kitchen board will pick it up.</p>
             <form method="post" action={`/api/staff/orders/${order.code}`}>

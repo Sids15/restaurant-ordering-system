@@ -16,12 +16,13 @@ import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 import "../../styles/order-builder.css";
 
+import { can } from "../../lib/auth/access";
 export const prerender = false;
 
-const { profile } = Astro.locals;
+const { profile, grants } = Astro.locals;
 
 // Kitchen may see orders but not take them — send them back to the console.
-if (profile!.role !== "manager" && profile!.role !== "server") {
+if (!can(grants, "orders.take")) {
   return Astro.redirect("/staff", 302);
 }
 
@@ -41,7 +42,7 @@ const VEG_LABEL: Record<string, string> = {
 ---
 
 <AppLayout title={`Build an order — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="build">
+  <StationShell role={profile!.role} grants={grants} name={profile!.name} pathname={Astro.url.pathname} variant="build">
     <StationMasthead title="Build an order" />
 
     {errorText && <p class="st-alert st-alert--error st-rise" role="alert">{errorText}</p>}

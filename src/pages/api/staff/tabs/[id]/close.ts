@@ -3,13 +3,13 @@
  * take orders (manager, server) may close. Redirects back to the bill.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../../lib/auth/session";
+import { requirePermission } from "../../../../../lib/auth/session";
 import { closeTab } from "../../../../../lib/orders/tabs";
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["manager", "server"]);
+  const gate = requirePermission(context.locals, "tabs.close");
   if (gate instanceof Response) return gate;
 
   const id = context.params.id ?? "";

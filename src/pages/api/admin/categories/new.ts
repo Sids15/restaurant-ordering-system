@@ -2,13 +2,13 @@
  * POST /api/admin/categories/new — create a category. Manager only.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { createCategory } from "../../../../lib/menu/admin";
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["manager"]);
+  const gate = requirePermission(context.locals, "menu.manage");
   if (gate instanceof Response) return gate;
 
   const form = await context.request.formData();

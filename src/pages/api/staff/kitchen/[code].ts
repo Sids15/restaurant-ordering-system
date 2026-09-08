@@ -4,13 +4,13 @@
  * Returns JSON for the board island (fetch).
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { completeOrder } from "../../../../lib/orders/kitchen";
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["kitchen"]);
+  const gate = requirePermission(context.locals, "kitchen.view");
   if (gate instanceof Response) return gate;
 
   const code = (context.params.code ?? "").toUpperCase();

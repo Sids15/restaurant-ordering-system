@@ -4,13 +4,13 @@
  * it takes precedence over /kitchen/[code].
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { getKitchenMenu } from "../../../../lib/menu/availability";
 
 export const prerender = false;
 
 export const GET: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["kitchen", "manager"]);
+  const gate = requirePermission(context.locals, "kitchen.view");
   if (gate instanceof Response) return gate;
 
   const menu = await getKitchenMenu(context.locals.supabase);

@@ -10,7 +10,8 @@
  */
 import AppLayout from "../../layouts/AppLayout.astro";
 import { safeNext } from "../../lib/http/safe-next";
-import { roleCanAccess } from "../../lib/auth/access";
+import { pathAllowed } from "../../lib/auth/access";
+import { loadStaff } from "../../lib/auth/session";
 import { brand } from "../../data/brand";
 
 export const prerender = false;
@@ -19,25 +20,17 @@ const params = Astro.url.searchParams;
 const next = safeNext(params.get("next"));
 const error = params.get("error");
 
-let signedInRole: string | null = null;
-const {
-  data: { user },
-} = await Astro.locals.supabase.auth.getUser();
-if (user) {
-  const { data: prof } = await Astro.locals.supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  signedInRole = prof?.role ?? null;
-  if (roleCanAccess(next, signedInRole as never)) {
-    return Astro.redirect(next, 302);
-  }
+// Someone already signed in who can open the destination is sent straight
+// through; someone signed in who CAN'T sees the form, so they can switch to an
+// account that has the permission rather than bouncing in a redirect loop.
+const { user, profile, grants } = await loadStaff(Astro.locals.supabase);
+const signedInRole: string | null = profile?.role ?? null;
+if (user && profile && pathAllowed(next, grants)) {
+  return Astro.redirect(next, 302);
 }
 
 const ERROR_COPY: Record<string, string> = {
   invalid: "That email and password don't match. Please try again.",
-  missing: "Enter your email and password.",
   throttled: "Too many sign-in attempts. Please wait a few minutes and try again.",
 };
 const errorText = error ? (ERROR_COPY[error] ?? "Couldn't sign you in.") : null;

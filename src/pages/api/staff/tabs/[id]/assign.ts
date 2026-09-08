@@ -8,14 +8,14 @@
  * instead of the bill; it is sanitised to a same-origin path.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../../lib/auth/session";
+import { requirePermission } from "../../../../../lib/auth/session";
 import { assignTab } from "../../../../../lib/orders/assign";
 import { safeNext } from "../../../../../lib/http/safe-next";
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["manager", "server"]);
+  const gate = requirePermission(context.locals, "tabs.assign");
   if (gate instanceof Response) return gate;
 
   const id = context.params.id ?? "";

@@ -11,7 +11,7 @@
  * rounds bill separately from this one.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { createOrder, type CreateOrderLine } from "../../../../lib/orders/create";
 import { openOrJoinTab } from "../../../../lib/orders/tabs";
 import { claimTabIfUnassigned } from "../../../../lib/orders/assign";
@@ -19,7 +19,7 @@ import { claimTabIfUnassigned } from "../../../../lib/orders/assign";
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["manager", "server"]);
+  const gate = requirePermission(context.locals, "orders.take");
   if (gate instanceof Response) return gate;
 
   const form = await context.request.formData();

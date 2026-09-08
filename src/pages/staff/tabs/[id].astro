@@ -15,10 +15,11 @@ import { SERVICE_RATE, GST_RATE } from "../../../lib/billing";
 import { brand } from "../../../data/brand";
 import "../../../styles/staff.css";
 
+import { can } from "../../../lib/auth/access";
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
-if (profile!.role !== "manager" && profile!.role !== "server") {
+const { supabase, profile, grants } = Astro.locals;
+if (!can(grants, "tabs.view")) {
   return Astro.redirect("/staff", 302);
 }
 

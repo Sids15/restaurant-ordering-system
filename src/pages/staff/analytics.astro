@@ -16,6 +16,7 @@ import StationMasthead from "../../components/staff/StationMasthead.astro";
 import StationShell from "../../components/staff/StationShell.astro";
 import PeriodPicker from "../../components/staff/PeriodPicker.astro";
 import { dayLabel, monthRange } from "../../lib/orders/day";
+import { can } from "../../lib/auth/access";
 import { resolvePeriod } from "../../lib/orders/period";
 import { getDailyTotals } from "../../lib/orders/manager";
 import { getAnalytics, type Point, type DishRow, type NamedTotal } from "../../lib/orders/analytics";
@@ -25,8 +26,10 @@ import "../../styles/staff.css";
 
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
-if (profile!.role !== "manager") return Astro.redirect("/staff", 302);
+const { supabase, profile, grants } = Astro.locals;
+// Middleware already enforces this; the check stays so the page is safe on
+// its own terms if it is ever reached another way.
+if (!can(grants, "reports.analytics")) return Astro.redirect("/staff", 302);
 
 const sel = resolvePeriod(Astro.url, "/staff/analytics", { defaultDays: 30 });
 const [a, activity] = await Promise.all([
@@ -96,7 +99,7 @@ const empty = a.headline.orders === 0 && a.headline.voids === 0;
 ---
 
 <AppLayout title={`Analytics — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+  <StationShell role={profile!.role} grants={grants} name={profile!.name} pathname={Astro.url.pathname}>
     <StationMasthead title="Analytics" eyebrow={sel.label}>
       <PeriodPicker slot="actions" sel={sel} activity={activity} basePath="/staff/analytics" />
     </StationMasthead>

@@ -12,6 +12,7 @@ import StationMasthead from "../../components/staff/StationMasthead.astro";
 import StationShell from "../../components/staff/StationShell.astro";
 import PeriodPicker from "../../components/staff/PeriodPicker.astro";
 import { dayLabel, monthRange } from "../../lib/orders/day";
+import { can } from "../../lib/auth/access";
 import { resolvePeriod } from "../../lib/orders/period";
 import { getDaySummary, getDailyTotals } from "../../lib/orders/manager";
 import { assigneeName } from "../../lib/orders/assign";
@@ -21,8 +22,8 @@ import "../../styles/staff.css";
 
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
-if (profile!.role !== "manager") return Astro.redirect("/staff", 302);
+const { supabase, profile, grants } = Astro.locals;
+if (!can(grants, "reports.day")) return Astro.redirect("/staff", 302);
 
 const sel = resolvePeriod(Astro.url, "/staff/today");
 const { isRange, from, to, span, label } = sel;
@@ -64,6 +65,7 @@ function stamp(iso: string): string {
 <AppLayout title={`${label} — ${brand.name}`}>
   <StationShell
     role={profile!.role}
+    grants={grants}
     name={profile!.name}
     pathname={Astro.url.pathname}
     counts={{ "/staff/today": day.openTabs.length }}

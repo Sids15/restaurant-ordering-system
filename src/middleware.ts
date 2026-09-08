@@ -1,7 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { supabaseServer } from "./lib/supabase/server";
 import { loadStaff } from "./lib/auth/session";
-import { roleCanAccess } from "./lib/auth/access";
+import { pathAllowed } from "./lib/auth/access";
 import { rateLimitShared, clientIp } from "./lib/http/rate-limit";
 
 /**
@@ -65,6 +65,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   });
   context.locals.user = null;
   context.locals.profile = null;
+  context.locals.grants = null;
 
   const protectedPage =
     underAny(pathname, PROTECTED) && !PUBLIC_WITHIN.includes(pathname);
@@ -73,9 +74,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (protectedPage || sessionApi) {
     // Reading locals.supabase here fires the lazy getter, creating the client
     // (these routes are server-rendered, so the keys exist at runtime).
-    const { user, profile } = await loadStaff(context.locals.supabase);
+    const { user, profile, grants } = await loadStaff(context.locals.supabase);
     context.locals.user = user;
     context.locals.profile = profile;
+    context.locals.grants = grants;
 
     // Pages redirect to login; APIs fall through and answer with JSON 401/403.
     if (protectedPage && !profile) {
@@ -83,9 +85,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect(`/staff/login?next=${next}`, 302);
     }
 
-    // Wrong role for this surface → back to login. Switching between the kitchen
-    // and the order desk means signing in with the other account.
-    if (protectedPage && profile && !roleCanAccess(pathname, profile.role)) {
+    // The account exists but hasn't been granted this surface. Back to login,
+    // where they can sign in with an account that has it — switching between
+    // the kitchen and the order desk still means switching accounts.
+    if (protectedPage && profile && !pathAllowed(pathname, grants)) {
       const next = encodeURIComponent(pathname + context.url.search);
       return context.redirect(`/staff/login?next=${next}`, 302);
     }

@@ -32,5 +32,8 @@ declare namespace App {
     user: import("@supabase/supabase-js").User | null;
     /** The staff profile (role) for `user`, or null if not staff / not loaded. */
     profile: StaffProfile | null;
+    /** What `profile` is permitted to do, from the RBAC grants. Null when not
+     *  signed in as staff. See lib/auth/access.ts. */
+    grants: import("./lib/auth/access").Grants | null;
   }
 }

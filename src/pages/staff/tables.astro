@@ -17,12 +17,13 @@ import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 import "../../styles/table-qr.css";
 
+import { can } from "../../lib/auth/access";
 export const prerender = false;
 
-const { profile } = Astro.locals;
+const { profile, grants } = Astro.locals;
 // Manager only — middleware enforces this too (lib/auth/access.ts); the check
 // is repeated here so the page can't be reached if that rule ever moves.
-if (profile!.role !== "manager") {
+if (!can(grants, "tables.manage")) {
   return Astro.redirect("/staff", 302);
 }
 
@@ -81,7 +82,7 @@ const prefill = labels.join(", ");
 ---
 
 <AppLayout title={`Table QR codes — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="tblq">
+  <StationShell role={profile!.role} grants={grants} name={profile!.name} pathname={Astro.url.pathname} variant="tblq">
     <StationMasthead title="Table QR codes" />
 
     <form class="tblq__form no-print st-rise-2" method="get" action="/staff/tables">

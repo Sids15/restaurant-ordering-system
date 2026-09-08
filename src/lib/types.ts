@@ -4,7 +4,11 @@
  * code can import them.
  */
 
-export type Role = "manager" | "kitchen" | "server";
+/** Working staff roles. 'owner' sits above manager: it holds every permission
+ *  unconditionally and is the only role that can change what others may do.
+ *  'pending' is deliberately absent — it means "signed up, not yet given a
+ *  role", and loadStaff treats it as not staff at all. */
+export type Role = "owner" | "manager" | "kitchen" | "server";
 export type VegType = "veg" | "non_veg" | "egg";
 export type OrderSource = "customer" | "server";
 export type TabStatus = "open" | "closed" | "merged";

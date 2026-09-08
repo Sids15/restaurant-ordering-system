@@ -15,19 +15,21 @@ import { getKitchenMenu } from "../../lib/menu/availability";
 import { brand } from "../../data/brand";
 import "../../styles/staff.css";
 
+import { can } from "../../lib/auth/access";
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
+const { supabase, profile, grants } = Astro.locals;
 const initialOrders = await getActiveKitchenOrders(supabase);
 
 // The 86 toggle is for kitchen + manager (the RPC enforces this too).
-const canEditAvailability = profile!.role === "kitchen" || profile!.role === "manager";
+const canEditAvailability = can(grants, "kitchen.availability");
 const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
 ---
 
 <AppLayout title={`Kitchen — ${brand.name}`}>
   <StationShell
     role={profile!.role}
+    grants={grants}
     name={profile!.name}
     pathname={Astro.url.pathname}
     counts={{ "/kitchen": initialOrders.length }}

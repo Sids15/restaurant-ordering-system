@@ -1,0 +1,428 @@
+---
+/**
+ * Roles and access — the owner decides what every other role may do.
+ *
+ * Two things live here because they are the same question asked twice: what a
+ * role is allowed to do, and which role each person has.
+ *
+ * Owner-only, and deliberately NOT permission-gated: a permission that can
+ * switch off the page that manages permissions is a lock with the key inside.
+ * The one exception is the bootstrap in lib/auth/access.ts — while no owner
+ * exists a manager may open this, so a fresh install has a way in.
+ */
+import AppLayout from "../../layouts/AppLayout.astro";
+import StationMasthead from "../../components/staff/StationMasthead.astro";
+import StationShell from "../../components/staff/StationShell.astro";
+import { canAdminister } from "../../lib/auth/access";
+import { groupedPermissions, EDITABLE_ROLES, DEFAULT_GRANTS } from "../../lib/auth/permissions";
+import { readGrants, listStaff, rbacReady } from "../../lib/auth/rbac";
+import { brand } from "../../data/brand";
+import "../../styles/staff.css";
+
+export const prerender = false;
+
+const { supabase, profile, grants } = Astro.locals;
+if (!canAdminister(grants)) return Astro.redirect("/staff", 302);
+
+const ready = await rbacReady(supabase);
+const [current, people] = ready
+  ? await Promise.all([readGrants(supabase), listStaff(supabase)])
+  : [new Map<string, Set<string>>(), await listStaff(supabase)];
+
+const groups = groupedPermissions();
+const params = Astro.url.searchParams;
+const ok = params.get("ok");
+const err = params.get("err");
+
+const ROLE_BLURB: Record<string, string> = {
+  manager: "Runs the shift. Sees the money.",
+  server: "Works the floor and takes payment.",
+  kitchen: "Cooks the tickets.",
+};
+
+const held = (role: string, permission: string) => current.get(role)?.has(permission) ?? false;
+const isDefault = (role: string, permission: string) =>
+  (DEFAULT_GRANTS[role] ?? []).includes(permission as never);
+
+// Anything the owner has moved away from the shipped defaults, so they can see
+// at a glance what has been customised — and put it back.
+const changed = EDITABLE_ROLES.filter((r) =>
+  groups.some((g) => g.items.some((p) => held(r, p.name) !== isDefault(r, p.name))),
+);
+
+const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
+---
+
+<AppLayout title={`Roles and access — ${brand.name}`}>
+  <StationShell
+    role={profile!.role}
+    grants={grants}
+    name={profile!.name}
+    pathname={Astro.url.pathname}
+  >
+    <StationMasthead title="Roles and access" />
+
+    {ok === "saved" && (
+      <p class="st-alert st-alert--ok" role="status">Permissions saved.</p>
+    )}
+    {ok === "reset" && (
+      <p class="st-alert st-alert--ok" role="status">Permissions restored to the defaults.</p>
+    )}
+    {ok === "role" && <p class="st-alert st-alert--ok" role="status">Role changed.</p>}
+    {err && <p class="st-alert st-alert--error" role="alert">{err}</p>}
+
+    {grants!.bootstrap && (
+      <p class="st-alert" role="status">
+        <strong>No owner yet.</strong> You can open this page because nobody owns this
+        restaurant. Make yourself the owner below — after that, only an owner can change
+        who may do what, and this door closes.
+      </p>
+    )}
+
+    {!ready ? (
+      <p class="st-empty st-rise">
+        The permissions tables aren't there yet. Apply
+        <code> supabase/migrations/010_owner_role.sql</code> and
+        <code> 011_rbac.sql</code>, then reload. Until then everyone keeps the access
+        they had before.
+      </p>
+    ) : (
+      <>
+        {/* --- What each role may do -------------------------------------- */}
+        <form class="perm st-rise" method="post" action="/api/staff/access/permissions">
+          <div class="perm__intro">
+            <h2 class="sec__title">What each role may do</h2>
+            <p class="perm__note">
+              A permission is a thing someone can do, not a page they can see — the pages
+              follow. The owner is not listed: an owner always holds everything, which is
+              what makes it impossible to lock yourself out of this page.
+              {changed.length > 0 && (
+                <>
+                  {" "}Changed from the defaults: <strong>{changed.join(", ")}</strong>.
+                </>
+              )}
+            </p>
+          </div>
+
+          <div class="matrix">
+            <div class="matrix__head">
+              <span class="matrix__corner">Permission</span>
+              {
+                EDITABLE_ROLES.map((r) => (
+                  <span class="matrix__role">
+                    <span class="matrix__role-name">{r}</span>
+                    <span class="matrix__role-blurb">{ROLE_BLURB[r]}</span>
+                  </span>
+                ))
+              }
+            </div>
+
+            {
+              groups.map((g) => (
+                <>
+                  <p class="matrix__group">{g.group}</p>
+                  {g.items.map((p) => (
+                    <div class="matrix__row">
+                      <span class="matrix__perm">
+                        <span class="matrix__label">{p.label}</span>
+                        <span class="matrix__desc">{p.description}</span>
+                      </span>
+                      {EDITABLE_ROLES.map((r) => (
+                        <label class="matrix__cell">
+                          <input
+                            class="toggle"
+                            type="checkbox"
+                            name={`grant:${r}:${p.name}`}
+                            checked={held(r, p.name)}
+                          />
+                          <span class="toggle__track" aria-hidden="true"></span>
+                          <span class="visually-hidden">
+                            {p.label} for {r}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              ))
+            }
+          </div>
+
+          <div class="perm__actions">
+            <button class="st-btn st-btn--primary" type="submit">Save permissions</button>
+            <button
+              class="st-btn st-btn--ghost"
+              type="submit"
+              name="action"
+              value="reset"
+              formnovalidate
+            >
+              Restore defaults
+            </button>
+          </div>
+        </form>
+
+        {/* --- Who has which role ----------------------------------------- */}
+        <section class="st-rise-2" aria-labelledby="people-h">
+          <h2 class="sec__title" id="people-h">Who has which role</h2>
+          <p class="perm__note">
+            A new sign-up starts as <strong>pending</strong> and can do nothing until you
+            give it a role.
+          </p>
+          <ul class="rows">
+            {
+              people.map((s) => (
+                <li class="row">
+                  <span class="row__main">
+                    <span class="row__title">{s.name?.trim() || "Unnamed"}</span>
+                    <span class="row__meta">{s.email ?? s.id.slice(0, 8)}</span>
+                  </span>
+                  <form class="rolepick" method="post" action="/api/staff/access/role">
+                    <input type="hidden" name="id" value={s.id} />
+                    <label class="visually-hidden" for={`role-${s.id}`}>
+                      Role for {s.name || s.id}
+                    </label>
+                    <select class="st-field__input rolepick__select" id={`role-${s.id}`} name="role">
+                      {ALL_ROLES.map((r) => (
+                        <option value={r} selected={s.role === r}>{r}</option>
+                      ))}
+                    </select>
+                    <button class="st-btn st-btn--ghost rolepick__go" type="submit">Set</button>
+                  </form>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="perm__note">
+            Making someone an owner gives them everything, including this page. There is no
+            way to take that back from here — do it in the Supabase SQL editor if you must.
+          </p>
+        </section>
+      </>
+    )}
+  </StationShell>
+</AppLayout>
+
+<style>
+  .sec__title {
+    margin-block-end: var(--space-8);
+    font-family: var(--font-display);
+    color: var(--ink);
+  }
+  .perm__note {
+    max-width: 46rem;
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .perm__intro {
+    margin-block-end: var(--space-24);
+  }
+  .perm {
+    display: block;
+  }
+  .perm__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-12);
+    margin-block-start: var(--space-24);
+  }
+
+  /* --- The matrix ------------------------------------------------------- */
+  .matrix {
+    --cols: 3;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    overflow: hidden;
+  }
+  .matrix__head,
+  .matrix__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(var(--cols), 6rem);
+    align-items: center;
+    gap: var(--space-16);
+    padding: var(--space-12) var(--space-24);
+  }
+  .matrix__head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface-sunken);
+    border-bottom: 1px solid var(--border);
+  }
+  .matrix__corner,
+  .matrix__role-name {
+    font-size: var(--fs-label);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .matrix__role {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+  .matrix__role-name {
+    color: var(--ink);
+  }
+  .matrix__role-blurb {
+    font-size: var(--fs-micro);
+    color: var(--ink-muted);
+    line-height: 1.3;
+  }
+  .matrix__group {
+    /* It's a <p>, and global.css caps those at --measure for readability —
+       which would stop this band two-thirds of the way across the table. */
+    max-width: none;
+    padding: var(--space-16) var(--space-24) var(--space-8);
+    background: var(--surface);
+    border-block: 1px solid var(--border);
+    font-family: var(--font-display);
+    font-size: var(--fs-heading-s);
+    color: var(--ink);
+  }
+  .matrix__row {
+    border-bottom: 1px solid var(--border);
+  }
+  .matrix__row:last-child {
+    border-bottom: 0;
+  }
+  .matrix__perm {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .matrix__label {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .matrix__desc {
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .matrix__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap);
+    cursor: pointer;
+  }
+
+  /* --- Toggle ------------------------------------------------------------
+     A real checkbox, visually hidden but still the thing that gets focused,
+     clicked and posted — so it keyboards and submits like a checkbox and only
+     looks like a switch. */
+  .toggle {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle__track {
+    display: block;
+    width: 2.5rem;
+    height: 1.4rem;
+    padding: 2px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .toggle__track::before {
+    content: "";
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .toggle:checked + .toggle__track {
+    background: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .toggle:checked + .toggle__track::before {
+    transform: translateX(1.1rem);
+  }
+  .toggle:focus-visible + .toggle__track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* --- People ------------------------------------------------------------ */
+  .rows {
+    display: flex;
+    flex-direction: column;
+    margin-block-start: var(--space-16);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-16);
+    min-height: 3.5rem;
+    padding: var(--space-8) var(--space-24);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .row:last-child {
+    border-bottom: 0;
+  }
+  .row__main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .row__title {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--ink);
+    text-transform: capitalize;
+  }
+  .row__meta {
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .rolepick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+  .rolepick__select {
+    min-height: var(--tap);
+    min-width: 8rem;
+    text-transform: capitalize;
+  }
+  .rolepick__go {
+    min-height: var(--tap);
+    padding-inline: var(--space-16);
+    font-size: var(--fs-label);
+  }
+
+  @media (max-width: 60rem) {
+    .matrix__head,
+    .matrix__row {
+      grid-template-columns: minmax(0, 1fr) repeat(var(--cols), 4rem);
+      padding-inline: var(--space-16);
+      gap: var(--space-8);
+    }
+    .matrix__role-blurb {
+      display: none;
+    }
+    .row {
+      flex-wrap: wrap;
+      padding-inline: var(--space-16);
+    }
+  }
+</style>

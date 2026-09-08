@@ -1,39 +1,62 @@
 /**
- * Which staff roles may see which surface. Kitchen and the server/manager
- * console are separate: a kitchen account can't open the order desk, a server
- * can't open the kitchen board, and switching means signing in with the other
- * account. Print/slip pages under /staff/orders are the one shared surface —
- * the kitchen prints slips too.
+ * Who may open what.
+ *
+ * This used to be a hard-coded list of roles per route. Access is now decided
+ * by permissions the owner grants on /staff/access, so the same question is
+ * asked of a set of granted capabilities instead (lib/auth/permissions.ts).
+ *
+ * The database enforces the same grants through has_permission() in RLS
+ * (011_rbac.sql), so this layer decides what to *offer* - which links appear,
+ * which page loads - while Postgres decides what can actually be read and
+ * written. Neither is trusted as the only check.
  */
 import type { Role } from "../types";
+import { requiredPermissions, type Permission } from "./permissions";
 
-/** Roles allowed on a page, or null if the path isn't role-gated. */
-export function allowedRoles(pathname: string): Role[] | null {
-  if (pathname.startsWith("/staff/orders/")) return ["kitchen", "server", "manager"];
-  if (pathname === "/kitchen" || pathname.startsWith("/kitchen/")) {
-    return ["kitchen", "manager"];
-  }
-  if (pathname === "/staff/login") return null;
-  // Table QR codes are printed once and last: a wrong or forged sheet is a
-  // physical problem to undo. Provisioning the floor is a manager decision,
-  // so this sits above the general /staff rule.
-  if (pathname === "/staff/tables" || pathname.startsWith("/staff/tables/")) {
-    return ["manager"];
-  }
-  // The day's takings, orders and tabs — a manager's overview of the shift.
-  if (pathname === "/staff/today") return ["manager"];
-  // Trading performance: revenue, menu mix, staff and void figures.
-  if (pathname === "/staff/analytics") return ["manager"];
-  if (pathname === "/staff" || pathname.startsWith("/staff/")) {
-    return ["server", "manager"];
-  }
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) return ["manager"];
-  return null;
+/** The access-control page itself. Not permission-gated - see canAdminister. */
+export const ACCESS_PATH = "/staff/access";
+
+/** A staff member's granted capabilities, as loaded for the request. */
+export interface Grants {
+  role: Role;
+  permissions: Set<string>;
+  /** No owner exists yet, so a manager may administer rather than be locked out. */
+  bootstrap: boolean;
 }
 
-/** True if the role may view the path (or the path isn't gated). */
-export function roleCanAccess(pathname: string, role: Role | null | undefined): boolean {
-  const allowed = allowedRoles(pathname);
-  if (!allowed) return true;
-  return !!role && allowed.includes(role);
+/** True if the grants include `permission`. An owner holds everything. */
+export function can(grants: Grants | null | undefined, permission: Permission): boolean {
+  if (!grants) return false;
+  if (grants.role === "owner") return true;
+  return grants.permissions.has(permission);
+}
+
+/** True if any one of `permissions` is held. */
+export function canAny(grants: Grants | null | undefined, permissions: Permission[]): boolean {
+  return permissions.some((p) => can(grants, p));
+}
+
+/**
+ * May this person change what other people can do?
+ *
+ * Owners, always. A manager only while NO owner exists: a fresh install has
+ * nobody to grant the first permission, and an administration page nobody can
+ * reach is worse than one whose first administrator is the existing top role.
+ * That door closes the moment an owner exists, and a manager cannot create one
+ * - writing to `profiles` is owner-only in RLS.
+ */
+export function canAdminister(grants: Grants | null | undefined): boolean {
+  if (!grants) return false;
+  if (grants.role === "owner") return true;
+  return grants.bootstrap && grants.role === "manager";
+}
+
+/** True if the grants open `pathname` (or it isn't gated at all). */
+export function pathAllowed(pathname: string, grants: Grants | null | undefined): boolean {
+  if (pathname === ACCESS_PATH || pathname.startsWith(`${ACCESS_PATH}/`)) {
+    return canAdminister(grants);
+  }
+  const needed = requiredPermissions(pathname);
+  if (!needed) return true;
+  return canAny(grants, needed);
 }

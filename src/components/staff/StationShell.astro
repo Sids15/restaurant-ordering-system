@@ -7,9 +7,12 @@
  */
 import StationNav from "./StationNav.astro";
 import type { Role } from "../../lib/types";
+import type { Grants } from "../../lib/auth/access";
 
 interface Props {
   role: Role;
+  /** What this account may do — the rail only offers stations it can open. */
+  grants: Grants | null;
   name: string;
   pathname: string;
   /** Live per-station counts, keyed by href — see StationNav. */
@@ -17,11 +20,11 @@ interface Props {
   /** Station-specific modifier on the content column (e.g. "build", "tabs"). */
   variant?: string;
 }
-const { role, name, pathname, variant, counts } = Astro.props;
+const { role, grants, name, pathname, variant, counts } = Astro.props;
 ---
 
 <div class="stlayout">
-  <StationNav role={role} name={name} pathname={pathname} counts={counts} />
+  <StationNav role={role} grants={grants} name={name} pathname={pathname} counts={counts} />
   <main class:list={["st-shell", variant]}>
     <slot />
   </main>

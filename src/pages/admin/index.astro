@@ -15,7 +15,7 @@ import "../../styles/order-builder.css";
 
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
+const { supabase, profile, grants } = Astro.locals;
 const menu = await getAdminMenu(supabase);
 
 const params = Astro.url.searchParams;
@@ -32,7 +32,7 @@ const OK_COPY: Record<string, string> = {
 ---
 
 <AppLayout title={`Menu manager — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname}>
+  <StationShell role={profile!.role} grants={grants} name={profile!.name} pathname={Astro.url.pathname}>
     <StationMasthead eyebrow={`${brand.name} · Manager`} title="Menu manager">
       <a class="st-cta" slot="actions" href="/admin/items/new">
         <span aria-hidden="true">+</span> Add dish

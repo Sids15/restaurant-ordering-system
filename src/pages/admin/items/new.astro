@@ -13,13 +13,13 @@ import "../../../styles/staff.css";
 
 export const prerender = false;
 
-const { supabase, profile } = Astro.locals;
+const { supabase, profile, grants } = Astro.locals;
 const categories = await getCategoryOptions(supabase);
 const err = Astro.url.searchParams.get("err");
 ---
 
 <AppLayout title={`Add dish — ${brand.name}`}>
-  <StationShell role={profile!.role} name={profile!.name} pathname={Astro.url.pathname} variant="admin-form">
+  <StationShell role={profile!.role} grants={grants} name={profile!.name} pathname={Astro.url.pathname} variant="admin-form">
     <StationMasthead eyebrow={`${brand.name} · Manager`} title="Add a dish" />
 
     {err && <p class="st-alert st-alert--error" role="alert">{err}</p>}

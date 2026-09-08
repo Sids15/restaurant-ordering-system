@@ -4,13 +4,13 @@
  * ticket is identical whether it arrived at page load or via a poll.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { getActiveKitchenOrders } from "../../../../lib/orders/kitchen";
 
 export const prerender = false;
 
 export const GET: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals);
+  const gate = requirePermission(context.locals, "kitchen.view", "orders.view");
   if (gate instanceof Response) return gate;
 
   const orders = await getActiveKitchenOrders(context.locals.supabase);

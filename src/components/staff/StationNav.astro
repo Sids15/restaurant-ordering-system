@@ -10,23 +10,25 @@
  * only decides what's worth showing.
  */
 import { brand } from "../../data/brand";
-import { roleCanAccess } from "../../lib/auth/access";
+import { pathAllowed, canAdminister, ACCESS_PATH, type Grants } from "../../lib/auth/access";
 import type { Role } from "../../lib/types";
 
 interface Props {
   role: Role;
+  /** What this account may do — decides which stations appear. */
+  grants: Grants | null;
   name: string;
   /** Astro.url.pathname — used to mark the current station. */
   pathname: string;
   /** Live counts per href, e.g. { "/kitchen": 3 }. Zero and missing both hide. */
   counts?: Record<string, number>;
 }
-const { role, name, pathname, counts = {} } = Astro.props;
+const { role, grants, name, pathname, counts = {} } = Astro.props;
 
-// Filtered through the same roleCanAccess() the middleware enforces with, so
-// the rail can never offer a station that bounces you back to the login page.
-// A kitchen account sees the board and nothing else; it has no route to the
-// order desk, because /staff is server+manager only.
+// Filtered through the same pathAllowed() the middleware enforces with, so the
+// rail can never offer a station that bounces you back to the login page. What
+// each account sees follows the permissions its role has been granted, so
+// moving a capability between roles moves the link with it.
 const links = [
   { href: "/staff", label: "Order desk" },
   { href: "/staff/today", label: "Today" },
@@ -36,7 +38,8 @@ const links = [
   { href: "/staff/tables", label: "Table QR codes" },
   { href: "/kitchen", label: "Kitchen board" },
   { href: "/admin", label: "Menu manager" },
-].filter((l) => roleCanAccess(l.href, role));
+  { href: ACCESS_PATH, label: "Roles and access" },
+].filter((l) => pathAllowed(l.href, grants));
 
 // Longest match wins, so /staff/new marks itself rather than also lighting up
 // /staff — every station link would otherwise match the order desk's prefix.

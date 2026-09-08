@@ -4,13 +4,13 @@
  * the database). Static route, so it takes precedence over /kitchen/[code].
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { setAvailability } from "../../../../lib/menu/availability";
 
 export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["kitchen", "manager"]);
+  const gate = requirePermission(context.locals, "kitchen.availability");
   if (gate instanceof Response) return gate;
 
   let body: { itemId?: string; available?: boolean };

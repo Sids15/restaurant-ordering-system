@@ -4,13 +4,13 @@
  * orders (manager, server) poll this.
  */
 import type { APIRoute } from "astro";
-import { requireStaff } from "../../../../lib/auth/session";
+import { requirePermission } from "../../../../lib/auth/session";
 import { getPendingOrders } from "../../../../lib/orders/staff";
 
 export const prerender = false;
 
 export const GET: APIRoute = async (context) => {
-  const gate = requireStaff(context.locals, ["manager", "server"]);
+  const gate = requirePermission(context.locals, "orders.view");
   if (gate instanceof Response) return gate;
 
   const orders = await getPendingOrders(context.locals.supabase);
