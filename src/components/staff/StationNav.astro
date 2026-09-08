@@ -1,16 +1,15 @@
 ---
 /**
- * StationNav — the persistent back-of-house sidebar. Every station (order desk,
- * order builder, tabs, QR sheet, kitchen, menu manager) is one click away, so
- * staff stop hunting for links that used to live in each page's masthead.
+ * StationNav — the persistent back-of-house sidebar. Every station a person can
+ * open is one click away, so staff stop hunting for links that used to live in
+ * each page's masthead.
  *
- * The link set carries the role gating that was previously scattered across the
- * masthead `actions` slots: a kitchen login never had a route to the order
- * builder, and that stays true here. Middleware still enforces access — this
- * only decides what's worth showing.
+ * The rail shows what the account's PERMISSIONS open, not what its role is
+ * called, so an owner moving a capability between roles moves the link with it.
+ * Middleware still enforces access — this only decides what's worth offering.
  */
 import { brand } from "../../data/brand";
-import { pathAllowed, canAdminister, ACCESS_PATH, type Grants } from "../../lib/auth/access";
+import { pathAllowed, ACCESS_PATH, type Grants } from "../../lib/auth/access";
 import type { Role } from "../../lib/types";
 
 interface Props {

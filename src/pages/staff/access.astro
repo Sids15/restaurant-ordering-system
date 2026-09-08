@@ -351,9 +351,20 @@ const ALL_ROLES = ["owner", "manager", "server", "kitchen", "pending"];
   .toggle:checked + .toggle__track::before {
     transform: translateX(1.1rem);
   }
+  /* A halo with a gap punched out of it, rather than an outline: an accent
+     outline sitting 2px off an accent-filled pill reads as a doubled border. */
   .toggle:focus-visible + .toggle__track {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--border-strong),
+      0 0 0 2px var(--surface-raised),
+      0 0 0 4px var(--accent);
+  }
+  .toggle:checked:focus-visible + .toggle__track {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 2px var(--surface-raised),
+      0 0 0 4px var(--accent);
   }
 
   /* --- People ------------------------------------------------------------ */

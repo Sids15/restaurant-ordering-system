@@ -340,6 +340,33 @@
   outline: none;
 }
 
+/* A <select> wearing .st-field__input. Native select chrome is a different
+   height, font and colour on every platform, so it never matched the inputs
+   beside it — three pages had each invented their own patch. The arrow is drawn
+   here instead, in the muted ink so it reads as chrome rather than content. */
+select.st-field__input {
+  appearance: none;
+  padding-inline-end: var(--space-32);
+  color: var(--ink);
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position:
+    right var(--space-16) center,
+    right calc(var(--space-16) - 5px) center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+select.st-field__input:hover {
+  border-color: var(--ink-muted);
+}
+/* Some platforms colour the list itself from the page; state it explicitly. */
+select.st-field__input option {
+  color: var(--ink);
+  background: var(--surface-raised);
+}
+
 /* --- Buttons ------------------------------------------------------------------ */
 .st-btn {
   display: inline-flex;
