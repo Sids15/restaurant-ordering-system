@@ -333,6 +333,11 @@ function stamp(iso: string): string {
   .cal {
     position: relative;
   }
+  /* Lift the whole picker, not just its panel, so the open popover clears any
+     stacking context a later section might still introduce. */
+  .cal[open] {
+    z-index: var(--z-overlay, 200);
+  }
   .cal__toggle {
     display: inline-flex;
     align-items: center;
@@ -371,7 +376,9 @@ function stamp(iso: string): string {
 
   .cal__pop {
     position: absolute;
-    z-index: var(--z-overlay);
+    /* Fallback spelled out: an unresolvable var makes z-index invalid at
+       computed-value time, which silently drops it back to auto. */
+    z-index: var(--z-overlay, 200);
     inset-block-start: calc(100% + var(--space-8));
     inset-inline-end: 0;
     width: 20rem;

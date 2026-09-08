@@ -436,6 +436,11 @@
   .st-rise-3 {
     animation: st-rise var(--dur-reveal) var(--ease-out) 180ms both;
   }
+  /* `to: transform: none`, NOT translateY(0). They look identical, but any
+     transform other than none makes the element a stacking context — and with
+     fill-mode `both` that survives the animation forever. Every revealed
+     section then permanently outranked anything a masthead tried to float over
+     it, which is how the day picker ended up painting underneath the page. */
   @keyframes st-rise {
     from {
       opacity: 0;
@@ -443,7 +448,7 @@
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: none;
     }
   }
 }
