@@ -12,6 +12,7 @@ import { canAdminister } from "../../../../lib/auth/access";
 import { invalidateGrants } from "../../../../lib/auth/grants-cache";
 import { writeGrants, restoreDefaults } from "../../../../lib/auth/rbac";
 import { EDITABLE_ROLES } from "../../../../lib/auth/permissions";
+import { audit, actorOf } from "../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -34,6 +35,18 @@ export const POST: APIRoute = async (context) => {
   // who just saved sees the change on their very next request rather than
   // waiting out the TTL and wondering whether it saved.
   if (result.ok) invalidateGrants();
+
+  if (result.ok) {
+    audit({
+      action: "access.permissions",
+      actor: actorOf(gate.profile),
+      summary:
+        form.get("action") === "reset"
+          ? "Restored the default permissions"
+          : "Changed what roles may do",
+      request: context.request,
+    });
+  }
 
   const q = result.ok
     ? `ok=${form.get("action") === "reset" ? "reset" : "saved"}`

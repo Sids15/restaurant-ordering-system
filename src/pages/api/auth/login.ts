@@ -9,6 +9,7 @@ import type { APIRoute } from "astro";
 import { supabaseServer } from "../../../lib/supabase/server";
 import { safeNext } from "../../../lib/http/safe-next";
 import { rateLimitShared } from "../../../lib/http/rate-limit";
+import { audit, actorOf, anonActor } from "../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -35,6 +36,15 @@ export const POST: APIRoute = async (context) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // A failed sign-in is logged too. A run of them against one account is the
+    // shape of an attack, and it is invisible if only successes are recorded.
+    audit({
+      action: "auth.signin.failed",
+      actor: anonActor(email),
+      summary: `Failed sign-in for ${email}`,
+      detail: { reason: classify(error) },
+      request: context.request,
+    });
     // Don't report every failure as "wrong password". A rejected sign-in is
     // usually bad credentials, but a project-level setting can refuse the
     // request before the password is ever checked — and saying "wrong
@@ -52,6 +62,22 @@ export const POST: APIRoute = async (context) => {
       .eq("id", data.user.id)
       .maybeSingle();
     if (prof?.role === "kitchen") dest = "/kitchen";
+  }
+
+  if (data.user) {
+    const { data: who } = await supabase
+      .from("profiles")
+      .select("id, name, role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (who) {
+      audit({
+        action: "auth.signin",
+        actor: actorOf(who as never),
+        summary: `${(who.name as string)?.trim() || who.role} signed in`,
+        request: context.request,
+      });
+    }
   }
 
   return context.redirect(dest, 303);

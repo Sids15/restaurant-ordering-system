@@ -15,6 +15,7 @@ import { requirePermission } from "../../../../lib/auth/session";
 import { createOrder, type CreateOrderLine } from "../../../../lib/orders/create";
 import { openOrJoinTab } from "../../../../lib/orders/tabs";
 import { claimTabIfUnassigned } from "../../../../lib/orders/assign";
+import { audit, actorOf } from "../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -60,6 +61,16 @@ export const POST: APIRoute = async (context) => {
   // Whoever takes the first round owns the table by default — one less thing to
   // do at the pass. Only if nobody has it; a manager can reassign from the bill.
   if (tab) await claimTabIfUnassigned(context.locals.supabase, tab.tabId, gate.user.id);
+
+  audit({
+    action: "order.create",
+    actor: actorOf(gate.profile),
+    subjectType: "order",
+    subjectId: result.code,
+    summary: `Took order ${result.code} for table ${table_label}`,
+    detail: { table: table_label, lines: lines.length },
+    request: context.request,
+  });
 
   const q = new URLSearchParams({ code: result.code, ok: "created" });
   return context.redirect(`/staff?${q.toString()}`, 303);

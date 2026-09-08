@@ -9,6 +9,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../lib/auth/session";
 import { confirmOrder, cancelOrder } from "../../../../lib/orders/staff";
+import { audit, actorOf } from "../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -32,6 +33,20 @@ export const POST: APIRoute = async (context) => {
       : action === "cancel"
         ? await cancelOrder(supabase, code, gate.user.id)
         : ({ ok: false, error: "Unknown action." } as const);
+
+  if (result.ok) {
+    audit({
+      action: action === "cancel" ? "order.void" : "order.confirm",
+      actor: actorOf(gate.profile),
+      subjectType: "order",
+      subjectId: code,
+      summary:
+        action === "cancel"
+          ? `Voided order ${code}`
+          : `Confirmed order ${code}`,
+      request: context.request,
+    });
+  }
 
   // fetch callers (the pending queue) want JSON; form posts want the redirect.
   if (context.request.headers.get("accept")?.includes("application/json")) {

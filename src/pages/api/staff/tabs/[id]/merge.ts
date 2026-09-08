@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../../lib/auth/session";
 import { mergeTab } from "../../../../../lib/orders/tabs";
+import { audit, actorOf } from "../../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -18,6 +19,18 @@ export const POST: APIRoute = async (context) => {
   const from = String(form.get("from") ?? "");
 
   const result = await mergeTab(context.locals.supabase, id, from);
+
+  if (result.ok) {
+    audit({
+      action: "tab.merge",
+      actor: actorOf(gate.profile),
+      subjectType: "tab",
+      subjectId: id,
+      summary: `Merged table ${from} into this bill`,
+      detail: { from },
+      request: context.request,
+    });
+  }
 
   const q = new URLSearchParams();
   if (result.ok) q.set("merged", "1");

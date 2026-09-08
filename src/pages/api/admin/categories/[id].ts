@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../lib/auth/session";
 import { updateCategory, deleteCategory } from "../../../../lib/menu/admin";
+import { audit, actorOf } from "../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -19,6 +20,16 @@ export const POST: APIRoute = async (context) => {
 
   if (action === "delete") {
     const result = await deleteCategory(context.locals.supabase, id);
+    if (result.ok) {
+      audit({
+        action: "menu.category.delete",
+        actor: actorOf(gate.profile),
+        subjectType: "menu_category",
+        subjectId: id,
+        summary: "Deleted a category",
+        request: context.request,
+      });
+    }
     const q = result.ok ? "ok=cat-deleted" : `err=${encodeURIComponent(result.error)}`;
     return context.redirect(`/admin?${q}`, 303);
   }
@@ -26,6 +37,17 @@ export const POST: APIRoute = async (context) => {
   const name = String(form.get("name") ?? "");
   const sort_order = Math.floor(Number(form.get("sort_order")) || 0);
   const result = await updateCategory(context.locals.supabase, id, name, sort_order);
+  if (result.ok) {
+    audit({
+      action: "menu.category.update",
+      actor: actorOf(gate.profile),
+      subjectType: "menu_category",
+      subjectId: id,
+      summary: `Renamed a category to "${name}"`,
+      request: context.request,
+    });
+  }
+
   const q = result.ok ? "ok=cat-saved" : `err=${encodeURIComponent(result.error)}`;
   return context.redirect(`/admin?${q}`, 303);
 };

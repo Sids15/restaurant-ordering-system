@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../../lib/auth/session";
 import { moveTab } from "../../../../../lib/orders/tabs";
+import { audit, actorOf } from "../../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -18,6 +19,18 @@ export const POST: APIRoute = async (context) => {
   const to = String(form.get("to") ?? "");
 
   const result = await moveTab(context.locals.supabase, id, to);
+
+  if (result.ok) {
+    audit({
+      action: "tab.move",
+      actor: actorOf(gate.profile),
+      subjectType: "tab",
+      subjectId: id,
+      summary: `Moved a tab to table ${to}`,
+      detail: { to },
+      request: context.request,
+    });
+  }
 
   const q = new URLSearchParams();
   if (result.ok) q.set("moved", "1");

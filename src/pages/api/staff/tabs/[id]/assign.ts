@@ -11,6 +11,7 @@ import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../../lib/auth/session";
 import { assignTab } from "../../../../../lib/orders/assign";
 import { safeNext } from "../../../../../lib/http/safe-next";
+import { audit, actorOf } from "../../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -23,6 +24,18 @@ export const POST: APIRoute = async (context) => {
   const raw = String(form.get("to") ?? "").trim();
 
   const result = await assignTab(context.locals.supabase, id, raw || null);
+
+  if (result.ok) {
+    audit({
+      action: "tab.assign",
+      actor: actorOf(gate.profile),
+      subjectType: "tab",
+      subjectId: id,
+      summary: raw ? "Put a server on a table" : "Cleared a table's server",
+      detail: { assigned_to: raw || null },
+      request: context.request,
+    });
+  }
 
   const back = safeNext(String(form.get("next") ?? ""), `/staff/tabs/${id}`);
   const q = new URLSearchParams();

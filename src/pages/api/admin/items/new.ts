@@ -4,6 +4,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../lib/auth/session";
 import { parseItemForm, createItem } from "../../../../lib/menu/admin";
+import { audit, actorOf } from "../../../../lib/audit/log";
 
 export const prerender = false;
 
@@ -21,5 +22,14 @@ export const POST: APIRoute = async (context) => {
   if (!result.ok) {
     return context.redirect(`/admin/items/new?err=${encodeURIComponent(result.error)}`, 303);
   }
+  audit({
+    action: "menu.item.create",
+    actor: actorOf(gate.profile),
+    subjectType: "menu_item",
+    summary: `Added "${parsed.value.name}" at ${parsed.value.price}`,
+    detail: { name: parsed.value.name, price: parsed.value.price },
+    request: context.request,
+  });
+
   return context.redirect("/admin?ok=created", 303);
 };
