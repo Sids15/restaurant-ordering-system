@@ -35,11 +35,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   //
   // IF THIS APP EVER SHOWS DISH PHOTOGRAPHY: delete this block, and drop the
   // `service` line in astro.config.mjs.
+  // Through withSecurityHeaders like every other response: an early return is
+  // exactly how a response quietly skips the hardening at the bottom of this
+  // file.
   if (pathname === "/_image" || pathname.startsWith("/_image/")) {
-    return new Response("Not found", {
-      status: 404,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+    return withSecurityHeaders(
+      new Response("Not found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      }),
+    );
   }
 
   // --- Rate limiting (best-effort; see lib/http/rate-limit.ts) --------------

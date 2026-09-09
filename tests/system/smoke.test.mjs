@@ -220,6 +220,10 @@ note("only the browse menu is public to a crawler; everything else is per-guest"
     r.status === 404,
     `HTTP ${r.status} — /_image still reaches the image service, which decodes bytes a stranger chose`,
   );
+  // The refusal returns early, which is exactly how a response skips the
+  // hardening every other response gets. Cheap to assert, easy to lose.
+  is("...and is still hardened like every other response", r.headers.get("x-content-type-options"), "nosniff");
+  is("...including against framing", r.headers.get("x-frame-options"), "DENY");
 }
 
 // --- The endpoint a full floor hammers ---------------------------------------
