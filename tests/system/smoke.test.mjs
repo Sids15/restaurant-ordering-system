@@ -204,6 +204,40 @@ note("only the browse menu is public to a crawler; everything else is per-guest"
     "no JSON-LD Restaurant — search engines cannot read the address or hours",
   );
 }
+// --- The endpoint a full floor hammers ---------------------------------------
+// Every guest phone polls availability every five seconds. Twenty tables is
+// four requests a second, each waking a function and reading the database, and
+// that is what put p95 at 1624ms under a full floor in the load test.
+//
+// Every guest gets a byte-identical answer, so exactly one of those reads is
+// useful and the rest are the same query repeated. Letting the edge hold it for
+// a few seconds collapses them. The cost is that an 86'd dish stays VISIBLE a
+// few seconds longer — which is cosmetic only, because createOrder re-reads
+// availability and refuses a sold-out dish however stale the menu looked.
+{
+  const r = await http("/api/menu/availability");
+  const cc = r.headers.get("cache-control") ?? "";
+  ok(
+    "the availability poll is shared-cacheable",
+    /s-maxage=\d+/.test(cc),
+    `cache-control was "${cc}" — every phone's poll reaches the database`,
+  );
+  ok(
+    "...but not held by the browser itself",
+    /(^|,|\s)max-age=0/.test(cc),
+    `cache-control was "${cc}" — a phone could sit on its own stale copy past the window`,
+  );
+  ok(
+    "...and the window is short enough for a dish selling out",
+    Number(/s-maxage=(\d+)/.exec(cc)?.[1] ?? 999) <= 5,
+    `s-maxage was ${/s-maxage=(\d+)/.exec(cc)?.[1]}s — too long for a menu that changes mid-service`,
+  );
+  ok(
+    "...and a refresh never costs a guest the wait",
+    /stale-while-revalidate=\d+/.test(cc),
+    `cache-control was "${cc}" — the unlucky poll that lands on expiry pays the full query`,
+  );
+}
 {
   const r = await http("/favicon.svg");
   is("the favicon is served", r.status, 200);
