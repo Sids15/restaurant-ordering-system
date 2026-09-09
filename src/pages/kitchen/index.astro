@@ -19,11 +19,19 @@ import { can } from "../../lib/auth/access";
 export const prerender = false;
 
 const { supabase, profile, grants } = Astro.locals;
-const initialOrders = await getActiveKitchenOrders(supabase);
 
-// The 86 toggle is for kitchen + manager (the RPC enforces this too).
+// The 86 toggle is for kitchen + manager (the RPC enforces this too). Read
+// from the grants already on locals, so deciding this costs no round trip and
+// the menu fetch can start alongside the queue rather than behind it.
 const canEditAvailability = can(grants, "kitchen.availability");
-const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
+
+// Together, not one after the other: the queue and the menu have never
+// depended on each other, so waiting for the first before asking for the
+// second bought nothing but a second round trip on every kitchen load.
+const [initialOrders, initialMenu] = await Promise.all([
+  getActiveKitchenOrders(supabase),
+  canEditAvailability ? getKitchenMenu(supabase) : [],
+]);
 ---
 
 <AppLayout title={`Kitchen — ${brand.name}`}>

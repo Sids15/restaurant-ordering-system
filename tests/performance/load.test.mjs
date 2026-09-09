@@ -24,6 +24,43 @@ import {
 
 suite(`PERFORMANCE · ${BASE}`);
 
+// --- Round trips, which are readable without a running server ----------------
+// The kitchen page loaded its queue, waited for it, then loaded the menu — two
+// queries that never depended on each other, so the wait bought nothing. It was
+// invisible while the function ran a continent from the database and every
+// round trip cost ~300ms, because everything was slow. It is ~20ms now, and
+// still a round trip nobody needs.
+//
+// Asserted on the source rather than the clock: 20ms does not survive the noise
+// in an HTTP measurement, so a timing test for this would be a coin flip
+// dressed up as a check.
+{
+  const { readFileSync } = await import("node:fs");
+  const kitchen = readFileSync("src/pages/kitchen/index.astro", "utf8");
+  // Only the frontmatter runs on the server; an `await` below it is markup.
+  // \r?\n throughout: .gitattributes converts on checkout, so a Windows clone
+  // sees CRLF here and an \n-only pattern would quietly match nothing and
+  // report zero awaits — passing or failing for a reason that is not the code.
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(kitchen)?.[1] ?? "";
+  ok(
+    "the kitchen page's frontmatter is readable",
+    frontmatter.length > 0,
+    "no frontmatter matched — the assertions below would be measuring nothing",
+  );
+  const waits = (frontmatter.match(/\bawait\b/g) ?? []).length;
+  is(
+    `the kitchen page waits once, not twice (${waits} await${waits === 1 ? "" : "s"})`,
+    waits,
+    1,
+    "each await here is a round trip that nothing else overlaps with",
+  );
+  ok(
+    "...and that one wait covers both queries at once",
+    /await Promise\.all\(/.test(frontmatter),
+    "the queue and the menu are fetched one after the other again",
+  );
+}
+
 if (!(await appUp())) {
   skip("every measurement", `nothing serving at ${BASE}`);
   finish();
