@@ -204,6 +204,24 @@ note("only the browse menu is public to a crawler; everything else is per-guest"
     "no JSON-LD Restaurant — search engines cannot read the address or hours",
   );
 }
+// --- A door into a room with nothing in it -----------------------------------
+// Astro 7.2.4 carried a critical RCE in AVIF image optimization
+// (GHSA-26w7-cxv4-gfx2), and /_image was routed to the render function on the
+// deployment. The upgrade closes that specific hole; this closes the endpoint.
+//
+// There is not one <img>, <Image> or getImage() in the source. The app was
+// exposing an image-processing surface — historically a rich source of memory
+// bugs, in a library that decodes attacker-supplied bytes — for a feature it
+// has never used once.
+{
+  const r = await http("/_image?href=/favicon.svg&w=10&f=avif");
+  ok(
+    `the image endpoint is not exposed (HTTP ${r.status})`,
+    r.status === 404,
+    `HTTP ${r.status} — /_image still reaches the image service, which decodes bytes a stranger chose`,
+  );
+}
+
 // --- The endpoint a full floor hammers ---------------------------------------
 // Every guest phone polls availability every five seconds. Twenty tables is
 // four requests a second, each waking a function and reading the database, and

@@ -33,7 +33,20 @@ export default defineConfig({
   integrations: [react()],
 
   image: {
-    // AVIF + WebP with responsive srcset and lazy-loading (Section 26).
-    responsiveStyles: true,
+    // NO image optimization, deliberately.
+    //
+    // There is not one <img>, <Image> or getImage() in this app — dishes are
+    // typography and colour, not photography. But the optimization endpoint is
+    // routed whether or not anything uses it, and it decodes image bytes a
+    // stranger chose. Astro 7.2.4 shipped a critical RCE in exactly that path
+    // (GHSA-26w7-cxv4-gfx2, AVIF), which is what prompted this.
+    //
+    // The upgrade fixed that bug. Turning the service off means the next one in
+    // an image decoder is not our problem: a door into a room we keep nothing
+    // in is worth closing, not guarding.
+    //
+    // If this app ever does show dish photography, drop the `service` line and
+    // put `responsiveStyles: true` back.
+    service: { entrypoint: "astro/assets/services/noop" },
   },
 });

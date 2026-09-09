@@ -22,6 +22,26 @@ const underAny = (path: string, prefixes: string[]) =>
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
 
+  // --- The image endpoint, which this app has no use for ---------------------
+  // Astro routes /_image whether or not anything renders an image, and there is
+  // not one <img>, <Image> or getImage() in this codebase. Astro 7.2.4 shipped
+  // a critical RCE in that path (GHSA-26w7-cxv4-gfx2, AVIF decoding); the
+  // upgrade fixed that particular bug, and this makes the next one in an image
+  // decoder not our problem.
+  //
+  // Setting the image service to noop is not enough on its own — it stops the
+  // transform but still answers on the route — so the refusal lives here, which
+  // is the only way into the render function.
+  //
+  // IF THIS APP EVER SHOWS DISH PHOTOGRAPHY: delete this block, and drop the
+  // `service` line in astro.config.mjs.
+  if (pathname === "/_image" || pathname.startsWith("/_image/")) {
+    return new Response("Not found", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
+
   // --- Rate limiting (best-effort; see lib/http/rate-limit.ts) --------------
   // Only the two endpoints where a per-IP limit is a clear win and won't catch
   // legitimate NAT-shared traffic: staff login (credential stuffing) and
