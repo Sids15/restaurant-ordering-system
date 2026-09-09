@@ -61,6 +61,11 @@ export default function MenuApp({ categories, table }: Props) {
   // pocket and handed across a table, and an accidental order is a real round
   // the kitchen starts cooking and a server has to void.
   const [confirming, setConfirming] = useState(false);
+  // Set once a send has succeeded and this page is on its way out. A ref, not
+  // state, because what has to survive is the bfcache restore rather than a
+  // re-render — see the pageshow handler below.
+  const placed = useRef(false);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Availability, kept live: a dish 86'd in the kitchen drops off the menu.
   // Starts as every item (matches SSR), then the poll narrows it.
@@ -207,10 +212,25 @@ export default function MenuApp({ categories, table }: Props) {
    * page that was never re-created.
    *
    * `persisted` is what distinguishes a bfcache restore from a fresh load.
+   *
+   * When the guest is coming back off the tracking page, though, resetting is
+   * not enough: this page still holds the cart it just sent. placeOrder cleared
+   * that cart from storage before navigating, so the restored React state would
+   * write the sent order straight back on the next tap. Reload instead of
+   * unwinding it — a fresh load rehydrates an empty cart, drops the guest at
+   * the top of the menu, and re-reads availability, so anything 86'd while they
+   * were on the tracking page is already gone.
    */
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => {
       if (!e.persisted) return;
+      if (placed.current) {
+        // The restored page is on screen until the reload paints, and what it
+        // shows is the frozen confirm sheet. Say what is happening.
+        setReloading(true);
+        window.location.reload();
+        return;
+      }
       setPlacing(false);
       setConfirming(false);
     };
@@ -240,6 +260,7 @@ export default function MenuApp({ categories, table }: Props) {
       } catch {
         /* ignore */
       }
+      placed.current = true;
       window.location.href = `/order/${data.code}`;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -350,6 +371,7 @@ export default function MenuApp({ categories, table }: Props) {
           items={allItems}
           subtotal={subtotal}
           placing={placing}
+          reloading={reloading}
           table={table}
           confirming={confirming}
           onConfirm={() => setConfirming(true)}
@@ -444,6 +466,7 @@ function CartSheet({
   items,
   subtotal,
   placing,
+  reloading,
   table,
   confirming,
   onConfirm,
@@ -459,6 +482,7 @@ function CartSheet({
   items: Record<string, MenuItemData>;
   subtotal: number;
   placing: boolean;
+  reloading: boolean;
   table: string | null;
   confirming: boolean;
   onConfirm: () => void;
@@ -555,7 +579,7 @@ function CartSheet({
                   onClick={onPlace}
                   disabled={placing}
                 >
-                  {placing ? "Sending…" : "Yes, send it"}
+                  {reloading ? "Refreshing…" : placing ? "Sending…" : "Yes, send it"}
                 </button>
               </div>
             </div>

@@ -298,5 +298,33 @@ suite("REGRESSION · bugs that were real");
   );
 }
 
+// --- Back off the tracking page restored an order already sent ---------------
+// Resetting `placing` un-stuck the button, but the restored page still held the
+// cart it had just sent — local storage was cleared before the navigation, and
+// the restored React state would write it straight back on the next tap. A
+// guest pressing Back off "waiting for a server to confirm" has finished with
+// that cart. The page is reloaded rather than unwound, which also re-reads the
+// menu so anything 86'd while they were away is already gone.
+{
+  const menu = stripComments(read("src/components/order/MenuApp.tsx"));
+  ok(
+    "a restore after a placed order reloads instead of coming back as it was",
+    /e\.persisted[\s\S]{0,240}placed\.current[\s\S]{0,160}location\.reload\(\)/.test(menu),
+    "the restored page keeps its state — the sent cart can be written back to storage",
+  );
+  ok(
+    "only a send that actually succeeded arms the reload",
+    /if \(!res\.ok\)[\s\S]*placed\.current = true;\s*window\.location\.href = `\/order\//.test(
+      menu,
+    ),
+    "the flag is set before the response is checked — a failed send would reload the guest's cart away",
+  );
+  ok(
+    "the page being reloaded does not sit on a dead 'Sending…'",
+    /reloading \? "Refreshing…"/.test(menu),
+    "the restored sheet shows the frozen Sending… label until the reload paints",
+  );
+}
+
 note("each of these shipped broken once; the assertions are what stop a repeat");
 finish();
