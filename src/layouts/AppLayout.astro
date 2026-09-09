@@ -28,6 +28,42 @@ const RADIUS: Record<typeof brand.radius, string> = {
   soft: "1.25rem",
 };
 const brandVars = `--brand-accent:${brand.accent};--radius-base:${RADIUS[brand.radius]};`;
+
+// Absolute URLs for canonical and Open Graph. Astro.site comes from the `site`
+// config; falling back to the current origin keeps preview deployments and the
+// dev server honest rather than pointing them at production.
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+const canonical = new URL(Astro.url.pathname, origin).href;
+
+/**
+ * The restaurant as structured data.
+ *
+ * Everything here already lived in brand.ts for the UI — the address, the
+ * phone, the hours. Saying it again in a form a search engine can read is what
+ * turns a result into a listing with a location and an opening time on it.
+ * Emitted on every page: it describes the restaurant, not the page.
+ */
+const restaurantLd = {
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  name: brand.name,
+  description: brand.tagline,
+  url: origin,
+  telephone: brand.contact.phoneDisplay,
+  hasMap: brand.contact.mapsHref,
+  currenciesAccepted: brand.currency,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: brand.contact.address.line1,
+    addressLocality: brand.contact.address.locality,
+    addressRegion: brand.contact.address.region,
+    postalCode: brand.contact.address.postalCode,
+    addressCountry: brand.contact.address.country,
+  },
+  openingHours: brand.contact.hoursSchema,
+  hasMenu: new URL("/menu", origin).href,
+  acceptsReservations: false,
+};
 ---
 
 <!doctype html>
@@ -39,6 +75,24 @@ const brandVars = `--brand-accent:${brand.accent};--radius-base:${RADIUS[brand.r
     <meta name="theme-color" content="#fbf8f3" />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+
+    {/* A menu link is shared by message far more often than it is searched
+        for. Without these, that share is a bare URL with no name on it. */}
+    <meta property="og:site_name" content={brand.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_IN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(restaurantLd)} />
   </head>
   <body class="app" style={brandVars}>
     <slot />

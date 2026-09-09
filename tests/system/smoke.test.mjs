@@ -137,4 +137,81 @@ note("headers are asserted on a real response, not on the config that sets them"
   ok("no table-token secret in the HTML", !r.text.includes("TABLE_TOKEN_SECRET"), "the signing secret is named in the page");
 }
 
+// --- What a crawler is told --------------------------------------------------
+// The app is noindex by default, deliberately: per-table QR links and order
+// codes are per-guest and have no business in a public index. The browse menu
+// is the one exception — a restaurant wants its menu findable — so the sitemap
+// lists exactly that one URL and robots.txt closes everything else.
+note("only the browse menu is public to a crawler; everything else is per-guest");
+{
+  const r = await http("/sitemap.xml");
+  is("the sitemap is served", r.status, 200);
+  ok(
+    "...as XML",
+    (r.headers.get("content-type") ?? "").includes("xml"),
+    `content-type was ${r.headers.get("content-type")}`,
+  );
+  ok("...listing the browse menu", /<loc>[^<]*\/menu<\/loc>/.test(r.text), "the menu is not in the sitemap");
+  for (const path of ["/staff", "/kitchen", "/admin", "/order/"]) {
+    ok(
+      `...and not ${path}`,
+      !new RegExp(`<loc>[^<]*${path}`).test(r.text),
+      `${path} is advertised to crawlers`,
+    );
+  }
+}
+{
+  const r = await http("/robots.txt");
+  is("robots.txt is served", r.status, 200);
+  ok("...pointing at the sitemap", /Sitemap:\s*https?:\/\/\S+\/sitemap\.xml/i.test(r.text), r.text.slice(0, 120));
+  // /menu/ with a segment is a signed per-table token. Crawling one would not
+  // just read a page — resolveMenuAccess opens a tab on first visit.
+  for (const path of ["/staff", "/kitchen", "/admin", "/order/", "/menu/"]) {
+    ok(`...disallowing ${path}`, new RegExp(`Disallow:\\s*${path}`).test(r.text), `${path} is not disallowed`);
+  }
+}
+{
+  const menu = await http("/menu");
+  ok(
+    "the browse menu is indexable",
+    !/name=["']robots["'][^>]*noindex/.test(menu.text),
+    "the one page worth indexing still says noindex",
+  );
+  const login = await http("/staff/login");
+  ok(
+    "...while the staff surfaces are not",
+    /name=["']robots["'][^>]*noindex/.test(login.text),
+    "a staff page lost its noindex",
+  );
+}
+
+// --- The document itself -----------------------------------------------------
+// View source was two meta tags and a title. A restaurant page that shares to
+// WhatsApp with no name, no description and no image is a page nobody opens.
+{
+  const r = await http("/menu");
+  const head = r.text;
+  ok("there is a favicon", /rel=["'][^"']*icon/.test(head), "no icon link — the browser asks for /favicon.ico and 404s");
+  ok("there is a canonical URL", /rel=["']canonical["']/.test(head), "no canonical — duplicate URLs compete");
+  ok("Open Graph names the page", /property=["']og:title["']/.test(head), "no og:title — shared links show a bare URL");
+  ok("...and describes it", /property=["']og:description["']/.test(head), "no og:description");
+  ok("...and gives its type", /property=["']og:type["']/.test(head), "no og:type");
+  ok("...and its own URL", /property=["']og:url["']/.test(head), "no og:url");
+  ok("a Twitter card is declared", /name=["']twitter:card["']/.test(head), "no twitter:card");
+  ok(
+    "the restaurant is described as structured data",
+    /application\/ld\+json/.test(head) && /"@type"\s*:\s*"Restaurant"/.test(head),
+    "no JSON-LD Restaurant — search engines cannot read the address or hours",
+  );
+}
+{
+  const r = await http("/favicon.svg");
+  is("the favicon is served", r.status, 200);
+  ok(
+    "...as SVG",
+    (r.headers.get("content-type") ?? "").includes("svg"),
+    `content-type was ${r.headers.get("content-type")}`,
+  );
+}
+
 finish();

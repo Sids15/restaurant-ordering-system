@@ -58,7 +58,16 @@ const qrSvg = order
         <OrderStatus client:load code={order.code} initialState={order.state} />
 
         <section class="pass" aria-label="Your order code">
-          <div class="pass__qr" set:html={qrSvg} />
+          {/* The qrcode library emits a bare <svg> with no title and no role,
+              so the page whose whole purpose is this graphic offered a screen
+              reader nothing. The code is also printed below in text, so this
+              names the image rather than duplicating a reading of it. */}
+          <div
+            class="pass__qr"
+            role="img"
+            aria-label={`QR code for order ${order.code}`}
+            set:html={qrSvg}
+          />
           <div class="pass__meta">
             <p class="pass__label">Order code</p>
             <p class="pass__code">{order.code}</p>

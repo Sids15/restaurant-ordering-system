@@ -145,5 +145,26 @@ for (const [path, what] of PAGES) {
   }
 }
 
+// --- The QR code ---------------------------------------------------------
+// The only real image in the app. It is injected as raw SVG from the qrcode
+// library, which emits no title and no role, so a screen reader met a graphic
+// with nothing to say about it — on the page whose entire purpose is that
+// graphic. The generic "every image has alt text" check cannot see it: the
+// order page needs a live order code, which a smoke test does not have.
+{
+  const { readFileSync } = await import("node:fs");
+  const track = readFileSync("src/pages/order/[code].astro", "utf8");
+  ok(
+    "the order QR is announced, not silent",
+    /class="pass__qr"[^>]*role="img"/.test(track) || /role="img"[^>]*class="pass__qr"/.test(track),
+    "the QR wrapper carries no role — a screen reader finds an unlabelled graphic",
+  );
+  ok(
+    "...and names the order it encodes",
+    /class="pass__qr"[^>]*aria-label|aria-label[^>]*class="pass__qr"/.test(track),
+    "the QR has no accessible name",
+  );
+}
+
 note("automated checks find perhaps a third of real barriers — see docs/testing.md for the rest");
 finish();

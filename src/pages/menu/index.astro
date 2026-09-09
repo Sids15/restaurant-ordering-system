@@ -20,6 +20,13 @@ const invalid = access.mode === "invalid";
 const errored = access.mode === "error";
 ---
 
-<AppLayout title={`Menu — ${brand.name}`}>
+{/* The one page in the app worth finding. Every other surface is per-guest
+    (order codes, signed per-table links) or staff-only, so AppLayout's
+    noindex default stands everywhere else. See src/pages/sitemap.xml.ts. */}
+<AppLayout
+  title={`Menu — ${brand.name}`}
+  description={`${brand.tagline}. See the full menu at ${brand.name}, ${brand.contact.address.locality}.`}
+  noindex={false}
+>
   <MenuView table={table} elsewhere={elsewhere} invalid={invalid} errored={errored} />
 </AppLayout>

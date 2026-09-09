@@ -10,6 +10,11 @@ export default defineConfig({
   output: 'server',
   adapter: vercel(),
 
+  // The canonical origin, stated once. Canonical links, Open Graph URLs, the
+  // sitemap and robots.txt all read it from here, so moving to the
+  // restaurant's own domain is this one line.
+  site: 'https://restaurant-ordering-system-gamma-teal.vercel.app',
+
   // The app's front door is the customer menu.
   redirects: {
     '/': '/menu',

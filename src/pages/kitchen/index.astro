@@ -38,6 +38,10 @@ const initialMenu = canEditAvailability ? await getKitchenMenu(supabase) : [];
 
     <KitchenBoard client:load initialOrders={initialOrders} canComplete={can(grants, "kitchen.view")} />
 
-    {canEditAvailability && <AvailabilityPanel client:load initialMenu={initialMenu} />}
+    {/* Below the board, and the board is what the kitchen is watching. Its
+        markup is server-rendered either way; client:visible only defers the
+        hydration, so React loads after the queue is interactive rather than
+        competing with it. */}
+    {canEditAvailability && <AvailabilityPanel client:visible initialMenu={initialMenu} />}
   </StationShell>
 </AppLayout>

@@ -26,7 +26,19 @@ export const brand = {
       line1: "Level 06, High Street Apollo",
       line2: "Vijay Nagar, Indore",
       line3: "Madhya Pradesh 452010",
+      /** The same address in parts, for schema.org. Kept beside the display
+       *  lines rather than parsed out of them: "Vijay Nagar, Indore" splits
+       *  cleanly today and would not for the next restaurant. */
+      locality: "Indore",
+      region: "Madhya Pradesh",
+      postalCode: "452010",
+      /** ISO 3166-1 alpha-2. */
+      country: "IN",
     },
     hours: "12:00 PM – 11:30 PM · Everyday",
+    /** The same hours in schema.org's opening-hours grammar. Search engines
+     *  cannot read the display string, and emitting an unparseable value is
+     *  worse than emitting none. */
+    hoursSchema: "Mo-Su 12:00-23:30",
   },
 } as const;
