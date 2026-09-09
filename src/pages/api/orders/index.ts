@@ -9,6 +9,7 @@
 import type { APIRoute } from "astro";
 import { createOrder } from "../../../lib/orders/create";
 import { currentSession } from "../../../lib/orders/session";
+import { json } from "../../../lib/http/json";
 
 export const prerender = false;
 
@@ -40,10 +41,3 @@ export const POST: APIRoute = async (context) => {
   if (!result.ok) return json({ error: result.error }, 422);
   return json({ code: result.code }, 201);
 };
-
-function json(data: unknown, status: number): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}

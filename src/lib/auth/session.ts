@@ -10,6 +10,7 @@ import type { Role } from "../types";
 import { can, canAny, type Grants } from "./access";
 import { DEFAULT_GRANTS, PERMISSIONS, type Permission } from "./permissions";
 import { cachedGrants, cacheGrants, cachedOwnerExists, cacheOwnerExists } from "./grants-cache";
+import { json } from "../http/json";
 
 /**
  * The roles that actually grant access. A profile with any other role (e.g. the
@@ -156,11 +157,4 @@ export function requirePermission(
     : canAny(gate.grants, permissions);
   if (!ok) return json({ error: "You don't have permission to do that." }, 403);
   return gate;
-}
-
-function json(data: unknown, status: number): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
 }

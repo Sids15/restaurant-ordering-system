@@ -37,7 +37,7 @@ export interface RateLimitResult {
  * Count one hit against `key`. Returns ok:false once `limit` hits land inside
  * `windowMs`. `key` should already namespace the action (e.g. "login:1.2.3.4").
  */
-export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
 
   // Opportunistic cleanup so the map can't grow without bound.
@@ -97,11 +97,6 @@ function store(): { url: string; token: string } | null {
   const token =
     optionalRuntimeSecret("UPSTASH_REDIS_REST_TOKEN") ?? optionalRuntimeSecret("KV_REST_API_TOKEN");
   return url && token ? { url: url.replace(/\/+$/, ""), token } : null;
-}
-
-/** True when counters are shared across instances rather than per-instance. */
-export function rateLimitIsShared(): boolean {
-  return store() !== null;
 }
 
 /**

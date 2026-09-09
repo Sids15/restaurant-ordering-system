@@ -64,7 +64,7 @@ export interface PeriodSelection {
 }
 
 /** Shift a date key by whole days. */
-export function shiftDay(key: string, by: number): string {
+function shiftDay(key: string, by: number): string {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + by, 12)).toISOString().slice(0, 10);
 }

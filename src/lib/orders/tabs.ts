@@ -22,7 +22,7 @@ export interface OpenTab {
 }
 
 /** A hard-to-guess session token for a device. 192 bits from a CSPRNG. */
-export function generateSessionToken(): string {
+function generateSessionToken(): string {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");

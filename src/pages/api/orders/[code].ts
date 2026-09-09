@@ -6,6 +6,7 @@
  */
 import type { APIRoute } from "astro";
 import { getOrderState } from "../../../lib/orders/track";
+import { json } from "../../../lib/http/json";
 
 export const prerender = false;
 
@@ -16,15 +17,5 @@ export const GET: APIRoute = async ({ params }) => {
   const state = await getOrderState(code);
   if (!state) return json({ error: "Order not found." }, 404);
 
-  return new Response(JSON.stringify({ state }), {
-    status: 200,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
+  return json({ state }, 200, { "cache-control": "no-store" });
 };
-
-function json(data: unknown, status: number): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}

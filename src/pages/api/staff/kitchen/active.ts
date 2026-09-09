@@ -6,6 +6,7 @@
 import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../lib/auth/session";
 import { getActiveKitchenOrders } from "../../../../lib/orders/kitchen";
+import { json } from "../../../../lib/http/json";
 
 export const prerender = false;
 
@@ -14,8 +15,5 @@ export const GET: APIRoute = async (context) => {
   if (gate instanceof Response) return gate;
 
   const orders = await getActiveKitchenOrders(context.locals.supabase);
-  return new Response(JSON.stringify({ orders }), {
-    status: 200,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
+  return json({ orders }, 200, { "cache-control": "no-store" });
 };

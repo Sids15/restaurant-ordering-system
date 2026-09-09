@@ -78,17 +78,3 @@ export async function getAvailableItemIds(): Promise<string[]> {
   return (data ?? []).map((r) => r.id as string);
 }
 
-/** A flat list of all available items (for search/filter on the client). */
-export async function getAvailableItems(): Promise<MenuItem[]> {
-  const supabase = anonClient();
-  const { data, error } = await supabase
-    .from("menu_items")
-    .select("*")
-    .eq("is_available", true)
-    .order("sort_order");
-  if (error) {
-    console.error("[menu] getAvailableItems failed:", error);
-    return [];
-  }
-  return (data ?? []) as MenuItem[];
-}

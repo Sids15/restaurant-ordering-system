@@ -7,6 +7,7 @@ import type { APIRoute } from "astro";
 import { requirePermission } from "../../../../lib/auth/session";
 import { setAvailability } from "../../../../lib/menu/availability";
 import { audit, actorOf } from "../../../../lib/audit/log";
+import { json } from "../../../../lib/http/json";
 
 export const prerender = false;
 
@@ -39,10 +40,3 @@ export const POST: APIRoute = async (context) => {
 
   return json(result, result.ok ? 200 : 422);
 };
-
-function json(data: unknown, status: number): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}

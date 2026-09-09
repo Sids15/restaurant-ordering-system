@@ -30,7 +30,7 @@ export interface TrackedOrder {
 }
 
 /** Collapse the DB status enum to the three customer-visible states. */
-export function toCustomerState(status: string): CustomerOrderState {
+function toCustomerState(status: string): CustomerOrderState {
   if (status === "pending") return "waiting";
   if (status === "cancelled") return "cancelled";
   return "placed";

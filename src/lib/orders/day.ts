@@ -221,7 +221,7 @@ export function dateRange(fromKey: string, toKey: string, timeZone = brand.timez
 }
 
 /** The civil date after `key`. */
-export function nextDay(key: string): string {
+function nextDay(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 }
