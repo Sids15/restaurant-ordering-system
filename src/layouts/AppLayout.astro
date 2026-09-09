@@ -92,7 +92,15 @@ const restaurantLd = {
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
 
-    <script type="application/ld+json" set:html={JSON.stringify(restaurantLd)} />
+    {/* `<` escaped because JSON.stringify does not do it: a `</script>` in any
+        brand field would otherwise close this tag early and put whatever
+        followed into the document as markup. brand.ts is developer-edited, so
+        this is hardening rather than a live hole — but it costs two characters
+        and the next person pasting a field in should not need to know. */}
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(restaurantLd).replace(/</g, "\\u003c")}
+    />
   </head>
   <body class="app" style={brandVars}>
     <slot />

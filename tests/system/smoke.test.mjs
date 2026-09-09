@@ -203,6 +203,30 @@ note("only the browse menu is public to a crawler; everything else is per-guest"
     /application\/ld\+json/.test(head) && /"@type"\s*:\s*"Restaurant"/.test(head),
     "no JSON-LD Restaurant — search engines cannot read the address or hours",
   );
+  // JSON.stringify does not escape `<`, so a `</script>` anywhere in brand.ts
+  // would close the tag early and put whatever followed into the document as
+  // markup. brand.ts is developer-edited rather than user input, which makes
+  // this hardening rather than a live hole — but it is two characters, and the
+  // next person to paste a field in from somewhere should not have to know.
+  {
+    const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(head)?.[1] ?? "";
+    ok("the structured data block was found", ld.length > 0, "no ld+json block to check");
+    ok(
+      "...and carries no raw < today",
+      !/</.test(ld),
+      "a raw < reaches the page inside a <script>",
+    );
+    // The check above only says today's brand.ts happens to contain no `<`. It
+    // would go green on an unescaped page forever and then fail the day someone
+    // pastes in a field containing one. So pin the ESCAPE, not the sample.
+    const { readFileSync } = await import("node:fs");
+    const layout = readFileSync("src/layouts/AppLayout.astro", "utf8");
+    ok(
+      "...because the layout escapes < before emitting it",
+      /replace\(\/<\/g,\s*["'`]\\\\u003c["'`]\)/.test(layout),
+      "JSON.stringify output goes into a <script> unescaped — a `</script>` in brand.ts breaks out",
+    );
+  }
 }
 // --- A door into a room with nothing in it -----------------------------------
 // Astro 7.2.4 carried a critical RCE in AVIF image optimization

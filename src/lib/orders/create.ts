@@ -75,6 +75,19 @@ export async function createOrder(
     wanted.set(line.item_id, (wanted.get(line.item_id) ?? 0) + qty);
   }
 
+  // The cap again, on the COLLAPSED total.
+  //
+  // Checking it per submitted line only bounds what one line may say. Duplicate
+  // ids are merged above, so a hundred legal lines of the same dish at fifty
+  // each passed every check and became an order for five thousand of it — each
+  // line legal, the order not. The client never sends duplicates; anything that
+  // does is malformed or hostile, and either way the kitchen should not see it.
+  for (const [, total] of wanted) {
+    if (total > MAX_QTY_PER_LINE) {
+      return { ok: false, error: `Up to ${MAX_QTY_PER_LINE} of any one dish.` };
+    }
+  }
+
   const supabase = supabaseAdmin();
 
   // Re-read the requested items at their live price + availability.
