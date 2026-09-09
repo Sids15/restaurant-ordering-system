@@ -326,5 +326,35 @@ suite("REGRESSION · bugs that were real");
   );
 }
 
+// --- The whole site was slow because the function ran a continent away -------
+// Every response carried `X-Vercel-Id: bom1::iad1::…`: the request arrived at
+// the Mumbai edge and then crossed to Washington DC to execute, while the
+// database sits in ap-south-1. Measured on the deployment, a page doing no
+// database work took 400ms, one query took 650ms-1.04s, and the customer menu
+// took 1.05-1.76s. None of that was the app's code — it was ~300ms of ocean per
+// round trip, paid several times per page because the queries are sequential.
+//
+// Nothing in the repo pinned the region, so the deployment took Vercel's
+// default. This asserts the pin, because losing it again would not break
+// anything visibly — it would just quietly make the restaurant slow.
+{
+  let vercelConfig = null;
+  try {
+    vercelConfig = JSON.parse(read("vercel.json"));
+  } catch {
+    /* missing or unparseable — asserted below */
+  }
+  ok(
+    "the deployment pins a function region",
+    Array.isArray(vercelConfig?.regions) && vercelConfig.regions.length > 0,
+    "no vercel.json regions — functions fall back to Vercel's default, which is iad1",
+  );
+  ok(
+    "...and it is the region the database is in",
+    vercelConfig?.regions?.[0] === "bom1",
+    "the function is not in ap-south-1 with the database — every query pays a round trip across the planet",
+  );
+}
+
 note("each of these shipped broken once; the assertions are what stop a repeat");
 finish();
